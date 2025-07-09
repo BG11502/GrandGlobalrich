@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>รายงานยอดขายรายเดือน</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  <style>
+    body { background-color: #f8f9fa; }
+    .card { border-radius: 1rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+    .form-check-inline { margin-right: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <div class="mb-3 text-start">
+      <a href="index.html" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> กลับหน้าหลัก
+      </a>
+    </div>
+
+    <h2 class="text-center text-primary mb-4">📊 รายงานยอดขายรายเดือน</h2>
+
+    <!-- ฟิลเตอร์ -->
+    <div class="card p-4 mb-4">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">เลือกปี</label>
+          <select id="selectedYear" class="form-select"></select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">เลือกเดือน (หลายเดือน)</label>
+          <div id="monthCheckboxes" class="d-flex flex-wrap gap-2"></div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">เลือกช่วงวันที่</label>
+          <div class="input-group">
+            <input type="date" id="startDate" class="form-control" />
+            <span class="input-group-text">ถึง</span>
+            <input type="date" id="endDate" class="form-control" />
+          </div>
+        </div>
+        <div class="col-md-12 text-end pt-2">
+          <button class="btn btn-primary me-2" onclick="renderReport()">✅ ยืนยันการกรอง</button>
+          <button class="btn btn-outline-secondary" onclick="clearDayFilter()">❌ ล้างการกรอง</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- รายเดือน -->
+    <div class="card p-4 mb-4">
+      <h5 class="text-secondary mb-3"><i class="bi bi-calendar-month me-2"></i> รายละเอียดยอดขายรายเดือน</h5>
+      <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle">
+          <thead class="table-light">
+            <tr><th>เดือน</th><th>ออเดอร์</th><th>จำนวนตีกลับ</th><th>รายได้</th><th>ยอดตีกลับ</th></tr>
+          </thead>
+          <tbody id="monthlyCompareBody"></tbody>
+          <tfoot class="table-dark fw-bold">
+            <tr><td>รวม</td><td id="sumMonthlyQty">0</td><td id="sumMonthlyRet">0</td><td id="sumMonthlyAmt">฿0.00</td><td id="sumMonthlyRef">฿0.00</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- รายวัน -->
+    <div class="card p-4 mb-4">
+      <h5 class="text-secondary mb-3"><i class="bi bi-calendar2-week me-2"></i> สรุปรายวันของเดือนที่เลือก</h5>
+      <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle">
+          <thead class="table-info">
+            <tr><th>วันที่</th><th>ออเดอร์</th><th>ตีกลับ</th><th>รายได้</th><th>ยอดตีกลับ</th></tr>
+          </thead>
+          <tbody id="dailySummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- รายวัน SKU -->
+    <div class="card p-4 mb-4">
+      <h5 class="text-secondary mb-3"><i class="bi bi-box-seam me-2"></i> รายละเอียด SKU รายวัน</h5>
+      <div class="row mb-3">
+        <div class="col-md-6"><input type="text" class="form-control" id="searchSKU" placeholder="🔍 ค้นหา SKU" oninput="renderReport()" /></div>
+        <div class="col-md-6 text-end">
+          <select id="sortOption" class="form-select w-auto d-inline" onchange="renderReport()">
+            <option value="">🔃 เรียงตาม...</option>
+            <option value="qty">จำนวนขายมาก → น้อย</option>
+            <option value="amt">ยอดขายมาก → น้อย</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle">
+          <thead class="table-primary">
+            <tr><th>SKU</th><th>จำนวน</th><th>ตีกลับ</th><th>รายได้</th><th>คืนเงิน</th></tr>
+          </thead>
+          <tbody id="dailyCompareBody"></tbody>
+          <tfoot class="table-dark fw-bold">
+            <tr><td>รวม</td><td id="sumQty">0</td><td id="sumReturn">0</td><td id="sumAmount">0.00</td><td id="sumRefund">0.00</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+const _supabase = supabase.createClient(
+  "https://vzxttbvwukpsxqdaulvo.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U"
+);
+
+let byYearMonth = {}, byYearDate = {};
+
+async function loadHistoryFromSupabase() {
+  const { data, error } = await _supabase.from("sku_history").select("*").order("date", { ascending: true });
+  if (error) {
+    console.error("โหลดจาก Supabase ล้มเหลว:", error);
+    useLocalStorageHistory();
+    return;
+  }
+  byYearMonth = {}; byYearDate = {};
+  data.forEach(e => {
+    const ym = e.date.slice(0, 7);
+    const y = e.date.slice(0, 4);
+    if (!byYearMonth[ym]) byYearMonth[ym] = [];
+    if (!byYearDate[y]) byYearDate[y] = [];
+    byYearMonth[ym].push(e);
+    byYearDate[y].push(e);
+  });
+  populateYearDropdown();
+  renderReport();
+}
+
+function useLocalStorageHistory() {
+  const raw = JSON.parse(localStorage.getItem("skuHistory") || "[]");
+  byYearMonth = {}; byYearDate = {};
+  raw.forEach(e => {
+    const ym = e.date.slice(0, 7);
+    const y = e.date.slice(0, 4);
+    if (!byYearMonth[ym]) byYearMonth[ym] = [];
+    if (!byYearDate[y]) byYearDate[y] = [];
+    byYearMonth[ym].push(e);
+    byYearDate[y].push(e);
+  });
+  populateYearDropdown();
+  renderReport();
+}
+
+function populateYearDropdown() {
+  const yearSelect = document.getElementById("selectedYear");
+  yearSelect.innerHTML = "";
+  Object.keys(byYearDate).sort().forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearSelect.appendChild(opt);
+  });
+  yearSelect.value = Object.keys(byYearDate).pop() || "";
+}
+
+const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+months.forEach((m, i) => {
+  const id = `month-${i+1}`;
+  document.getElementById("monthCheckboxes").innerHTML += `
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="${id}" value="${(i+1).toString().padStart(2, '0')}">
+      <label class="form-check-label" for="${id}">${m}</label>
+    </div>`;
+});
+
+function clearDayFilter() {
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  document.querySelectorAll("#monthCheckboxes input").forEach(cb => cb.checked = false);
+  document.getElementById("searchSKU").value = "";
+  document.getElementById("sortOption").value = "";
+  renderReport();
+}
+
+function getSelectedMonths() {
+  return Array.from(document.querySelectorAll("#monthCheckboxes input:checked")).map(cb => cb.value);
+}
+
+function getMonthRangeByCompanyRule(year, month) {
+  let startYear = year, startMonth = month - 1;
+  if (startMonth === 0) { startMonth = 12; startYear--; }
+  const startDate = new Date(startYear, startMonth - 1, 26);
+  const endDate = new Date(year, month - 1, 25);
+  return { start: startDate.toISOString().slice(0,10), end: endDate.toISOString().slice(0,10) };
+}
+
+function renderReport() {
+  const year = document.getElementById("selectedYear").value;
+  const startDateFilter = document.getElementById("startDate").value;
+  const endDateFilter = document.getElementById("endDate").value;
+  const selectedMonths = getSelectedMonths();
+
+  const monthBody = document.getElementById("monthlyCompareBody");
+  const daySummary = document.getElementById("dailySummaryBody");
+  const skuBody = document.getElementById("dailyCompareBody");
+
+  monthBody.innerHTML = "";
+  let totalQty = 0, totalRet = 0, totalAmt = 0, totalRef = 0;
+
+  for (let m = 1; m <= 12; m++) {
+    const { start, end } = getMonthRangeByCompanyRule(parseInt(year), m);
+    const entries = (byYearDate[year] || []).filter(e => {
+      if (startDateFilter && e.date < startDateFilter) return false;
+      if (endDateFilter && e.date > endDateFilter) return false;
+      if (selectedMonths.length && !selectedMonths.includes(e.date.slice(5, 7))) return false;
+      return e.date >= start && e.date <= end;
+    });
+    let qty = 0, ret = 0, amt = 0, ref = 0;
+    entries.forEach(e => (e.skus || []).forEach(s => {
+      qty += s.qty || 0;
+      ret += s.ret || 0;
+      amt += s.amt || 0;
+      ref += s.ref || 0;
+    }));
+    totalQty += qty; totalRet += ret; totalAmt += amt; totalRef += ref;
+    monthBody.innerHTML += `<tr><td>${months[m-1]}</td><td>${qty}</td><td>${ret}</td><td>฿${amt.toFixed(2)}</td><td>฿${ref.toFixed(2)}</td></tr>`;
+  }
+  document.getElementById("sumMonthlyQty").textContent = totalQty;
+  document.getElementById("sumMonthlyRet").textContent = totalRet;
+  document.getElementById("sumMonthlyAmt").textContent = `฿${totalAmt.toFixed(2)}`;
+  document.getElementById("sumMonthlyRef").textContent = `฿${totalRef.toFixed(2)}`;
+
+  daySummary.innerHTML = "";
+  const dayEntries = (byYearDate[year] || []).filter(e => {
+    if (startDateFilter && e.date < startDateFilter) return false;
+    if (endDateFilter && e.date > endDateFilter) return false;
+    if (selectedMonths.length && !selectedMonths.includes(e.date.slice(5, 7))) return false;
+    return true;
+  });
+  const dateMap = {};
+  dayEntries.forEach(e => {
+    if (!dateMap[e.date]) dateMap[e.date] = { qty: 0, ret: 0, amt: 0, ref: 0 };
+    (e.skus || []).forEach(s => {
+      dateMap[e.date].qty += s.qty || 0;
+      dateMap[e.date].ret += s.ret || 0;
+      dateMap[e.date].amt += s.amt || 0;
+      dateMap[e.date].ref += s.ref || 0;
+    });
+  });
+  Object.entries(dateMap).sort().forEach(([d, s]) => {
+    daySummary.innerHTML += `<tr><td>${d}</td><td>${s.qty}</td><td>${s.ret}</td><td>฿${s.amt.toFixed(2)}</td><td>฿${s.ref.toFixed(2)}</td></tr>`;
+  });
+
+  skuBody.innerHTML = "";
+  const skuMap = {};
+  dayEntries.forEach(e => (e.skus || []).forEach(s => {
+    if (!skuMap[s.name]) skuMap[s.name] = { qty: 0, ret: 0, amt: 0, ref: 0 };
+    skuMap[s.name].qty += s.qty || 0;
+    skuMap[s.name].ret += s.ret || 0;
+    skuMap[s.name].amt += s.amt || 0;
+    skuMap[s.name].ref += s.ref || 0;
+  }));
+  const keyword = document.getElementById("searchSKU").value.toLowerCase();
+  const sort = document.getElementById("sortOption").value;
+  let skuEntries = Object.entries(skuMap);
+  if (keyword) skuEntries = skuEntries.filter(([k]) => k.toLowerCase().includes(keyword));
+  if (sort === "qty") skuEntries.sort((a, b) => b[1].qty - a[1].qty);
+  if (sort === "amt") skuEntries.sort((a, b) => b[1].amt - a[1].amt);
+  let sumQty = 0, sumRet = 0, sumAmt = 0, sumRef = 0;
+  skuEntries.forEach(([sku, s]) => {
+    skuBody.innerHTML += `<tr><td>${sku}</td><td>${s.qty}</td><td>${s.ret}</td><td>${s.amt.toFixed(2)}</td><td>${s.ref.toFixed(2)}</td></tr>`;
+    sumQty += s.qty;
+    sumRet += s.ret;
+    sumAmt += s.amt;
+    sumRef += s.ref;
+  });
+  document.getElementById("sumQty").textContent = sumQty;
+  document.getElementById("sumReturn").textContent = sumRet;
+  document.getElementById("sumAmount").textContent = sumAmt.toFixed(2);
+  document.getElementById("sumRefund").textContent = sumRef.toFixed(2);
+}
+
+document.addEventListener("DOMContentLoaded", loadHistoryFromSupabase);
+</script>
+</body>
+</html>

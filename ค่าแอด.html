@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>บันทึกข้อมูลโฆษณา</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; }
+    .card { border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .table tfoot td { font-weight: bold; background-color: #f1f1f1; }
+    .btn-icon { display: inline-flex; align-items: center; gap: 0.4em; }
+    .btn-outline-secondary:hover { background-color: #e2e6ea; }
+  </style>
+</head>
+<body>
+<div class="container py-4">
+
+  <!-- 🔗 ปุ่มลิงก์ -->
+  <div class="d-flex justify-content-between mb-4">
+    <a href="index.html" class="btn btn-outline-primary btn-icon">
+      <i class="bi bi-house-door"></i> หน้าหลัก
+    </a>
+    <a href="หน้าสรุปยอดค่าแอด.html" class="btn btn-outline-secondary btn-icon">
+      <i class="bi bi-graph-up-arrow"></i> สรุปยอดค่าแอด
+    </a>
+  </div>
+
+  <!-- หัวเรื่อง -->
+  <h2 class="text-center mb-4 text-primary">📅 บันทึกข้อมูลโฆษณา</h2>
+
+  <!-- 👤 จัดการชื่อเจ้าของบัญชี -->
+  <div class="card p-3 mb-4">
+    <h5 class="mb-3">👤 จัดการชื่อเจ้าของบัญชี</h5>
+    <div class="input-group">
+      <input type="text" id="newOwner" class="form-control" placeholder="พิมพ์ชื่อเจ้าของบัญชีใหม่">
+      <button class="btn btn-success" onclick="addOwner()">
+        <i class="bi bi-plus-circle"></i> เพิ่ม
+      </button>
+    </div>
+    <div id="ownerList" class="d-flex flex-wrap gap-2 mt-3"></div>
+  </div>
+
+  <!-- 📥 ฟอร์มกรอกข้อมูล -->
+  <div class="card p-4 mb-4">
+    <form id="adForm">
+      <input type="hidden" id="editIndex">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">วันที่</label>
+          <input type="date" id="date" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">ชื่อบัญชี</label>
+          <input type="text" id="accountName" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">ID บัญชี</label>
+          <input type="text" id="accountId" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">เจ้าของบัญชี</label>
+          <select id="owner" class="form-select" required></select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">สถานะบัญชี</label>
+          <select id="status" class="form-select">
+            <option value="ใช้งานปกติ">ใช้งานปกติ</option>
+            <option value="ระงับ">ระงับ</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">ค่าใช้จ่าย</label>
+          <input type="number" id="spendTotal" class="form-control" step="0.01">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">ต้นทุน/ซื้อ</label>
+          <input type="number" id="costPerPurchase" class="form-control" step="0.01">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">จำนวนซื้อ</label>
+          <input type="number" id="purchases" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">รายได้</label>
+          <input type="number" id="revenue" class="form-control" step="0.01">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">ROAS</label>
+          <input type="number" id="roas" class="form-control" step="0.01">
+        </div>
+      </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="bi bi-save"></i> บันทึกข้อมูล
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 🔍 ตัวกรอง -->
+  <div class="mb-3 d-flex justify-content-between align-items-center">
+    <label class="form-label">กรองโดยเจ้าของบัญชี</label>
+    <select id="filterOwner" class="form-select w-auto"></select>
+  </div>
+
+  <!-- 🕘 ตารางย้อนหลัง -->
+  <div class="card p-4">
+    <h5 class="text-secondary mb-3"><i class="bi bi-clock-history"></i> ข้อมูลย้อนหลัง</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>วันที่</th>
+            <th>บัญชี</th>
+            <th>ID</th>
+            <th>เจ้าของ</th>
+            <th>สถานะ</th>
+            <th>ค่าใช้จ่าย</th>
+            <th>ต้นทุน/ซื้อ</th>
+            <th>ซื้อ</th>
+            <th>รายได้</th>
+            <th>ROAS</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5">รวม</td>
+            <td id="sumSpend">0.00</td>
+            <td id="avgCost">0.00</td>
+            <td id="sumPurchase">0</td>
+            <td id="sumRevenue">0.00</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="mt-3 text-end">
+      <button class="btn btn-secondary btn-icon" onclick="undoDelete()" id="undoBtn" style="display:none;">
+        <i class="bi bi-arrow-counterclockwise"></i> ยกเลิกการลบ
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ SCRIPT เหมือนเดิม -->
+<script>
+let adHistory = JSON.parse(localStorage.getItem("adHistory") || "[]");
+let ownerList = JSON.parse(localStorage.getItem("ownerList") || "[]");
+let lastDeleted = null;
+
+function saveData() {
+  localStorage.setItem("adHistory", JSON.stringify(adHistory));
+  renderTable();
+}
+
+function saveOwners() {
+  localStorage.setItem("ownerList", JSON.stringify(ownerList));
+  renderOwnerSelect();
+}
+
+function renderOwnerSelect() {
+  const owner = document.getElementById("owner");
+  const filter = document.getElementById("filterOwner");
+  owner.innerHTML = `<option disabled selected>เลือกเจ้าของบัญชี</option>`;
+  filter.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
+  ownerList.forEach(o => {
+    owner.innerHTML += `<option value="${o}">${o}</option>`;
+    filter.innerHTML += `<option value="${o}">${o}</option>`;
+  });
+
+  const list = document.getElementById("ownerList");
+  list.innerHTML = "";
+  ownerList.forEach((name, i) => {
+    list.innerHTML += `
+      <div class="badge bg-secondary p-2">
+        ${name}
+        <button class="btn-close btn-sm ms-2" onclick="removeOwner(${i})"></button>
+      </div>`;
+  });
+}
+
+function addOwner() {
+  const name = document.getElementById("newOwner").value.trim();
+  if (name && !ownerList.includes(name)) {
+    ownerList.push(name);
+    saveOwners();
+    document.getElementById("newOwner").value = "";
+  }
+}
+
+function removeOwner(i) {
+  ownerList.splice(i, 1);
+  saveOwners();
+}
+
+function renderTable() {
+  const filter = document.getElementById("filterOwner").value;
+  const tbody = document.getElementById("historyBody");
+  tbody.innerHTML = "";
+  const data = filter === "ทั้งหมด" ? adHistory : adHistory.filter(e => e.owner === filter);
+  let sumSpend = 0, sumCost = 0, sumPurchase = 0, sumRevenue = 0;
+
+  data.forEach((e, i) => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${e.date}</td>
+        <td>${e.accountName}</td>
+        <td>${e.accountId}</td>
+        <td>${e.owner}</td>
+        <td>${e.status || "ไม่ระบุ"}</td>
+        <td>${e.spendTotal.toFixed(2)}</td>
+        <td>${e.costPerPurchase.toFixed(2)}</td>
+        <td>${e.purchases}</td>
+        <td>${e.revenue.toFixed(2)}</td>
+        <td>${e.roas.toFixed(2)}</td>
+        <td>
+          <button class="btn btn-sm btn-warning" onclick="editEntry(${i})">✏️</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteEntry(${i})">🗑️</button>
+        </td>
+      </tr>`;
+    sumSpend += e.spendTotal;
+    sumCost += e.costPerPurchase;
+    sumPurchase += e.purchases;
+    sumRevenue += e.revenue;
+  });
+
+  document.getElementById("sumSpend").textContent = sumSpend.toFixed(2);
+  document.getElementById("avgCost").textContent = (data.length ? (sumCost / data.length).toFixed(2) : "0.00");
+  document.getElementById("sumPurchase").textContent = sumPurchase;
+  document.getElementById("sumRevenue").textContent = sumRevenue.toFixed(2);
+}
+
+function editEntry(i) {
+  const e = adHistory[i];
+  document.getElementById("editIndex").value = i;
+  date.value = e.date;
+  accountName.value = e.accountName;
+  accountId.value = e.accountId;
+  owner.value = e.owner;
+  status.value = e.status;
+  spendTotal.value = e.spendTotal;
+  costPerPurchase.value = e.costPerPurchase;
+  purchases.value = e.purchases;
+  revenue.value = e.revenue;
+  roas.value = e.roas;
+}
+
+function deleteEntry(i) {
+  if (confirm("แน่ใจว่าต้องการลบรายการนี้?")) {
+    lastDeleted = adHistory[i];
+    adHistory.splice(i, 1);
+    saveData();
+    document.getElementById("undoBtn").style.display = "inline-block";
+  }
+}
+
+function undoDelete() {
+  if (lastDeleted) {
+    adHistory.push(lastDeleted);
+    lastDeleted = null;
+    saveData();
+    document.getElementById("undoBtn").style.display = "none";
+  }
+}
+
+document.getElementById("adForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const entry = {
+    date: date.value,
+    accountName: accountName.value,
+    accountId: accountId.value,
+    owner: owner.value,
+    status: status.value,
+    spendTotal: parseFloat(spendTotal.value) || 0,
+    costPerPurchase: parseFloat(costPerPurchase.value) || 0,
+    purchases: parseInt(purchases.value) || 0,
+    revenue: parseFloat(revenue.value) || 0,
+    roas: parseFloat(roas.value) || 0,
+  };
+  const i = document.getElementById("editIndex").value;
+  if (i) adHistory[i] = entry;
+  else adHistory.push(entry);
+  this.reset();
+  document.getElementById("editIndex").value = "";
+  saveData();
+});
+
+document.getElementById("filterOwner").addEventListener("change", renderTable);
+renderOwnerSelect();
+renderTable();
+</script>
+<script>
+// ✅ Supabase client
+const supabase = supabase.createClient(
+  "https://vzxttbvwukpsxqdaulvo.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U"
+);
+
+// 🗃️ โหลดข้อมูลจาก Supabase แทน localStorage
+async function fetchAdHistory() {
+  const { data, error } = await supabase.from("ad_history").select("*").order("date", { ascending: true });
+  if (error) return console.error("Load error", error);
+  window.adHistory = data;
+  renderTable();
+}
+
+async function fetchOwnerList() {
+  const { data, error } = await supabase.from("ad_owners").select("name");
+  if (error) return console.error("Owner fetch error", error);
+  window.ownerList = data.map(e => e.name);
+  renderOwnerSelect();
+}
+
+// 💾 บันทึกข้อมูลใหม่
+document.getElementById("adForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const entry = {
+    date: date.value,
+    accountName: accountName.value,
+    accountId: accountId.value,
+    owner: owner.value,
+    status: status.value,
+    spendTotal: parseFloat(spendTotal.value) || 0,
+    costPerPurchase: parseFloat(costPerPurchase.value) || 0,
+    purchases: parseInt(purchases.value) || 0,
+    revenue: parseFloat(revenue.value) || 0,
+    roas: parseFloat(roas.value) || 0,
+  };
+
+  const editIdx = document.getElementById("editIndex").value;
+  if (editIdx) {
+    const id = adHistory[editIdx].id;
+    await supabase.from("ad_history").update(entry).eq("id", id);
+  } else {
+    await supabase.from("ad_history").insert([entry]);
+  }
+  this.reset();
+  document.getElementById("editIndex").value = "";
+  fetchAdHistory();
+});
+
+// 📝 ลบ / แก้ไข / Undo
+async function deleteEntry(i) {
+  if (!confirm("แน่ใจว่าต้องการลบรายการนี้?")) return;
+  const id = adHistory[i].id;
+  window.lastDeleted = adHistory[i];
+  await supabase.from("ad_history").delete().eq("id", id);
+  document.getElementById("undoBtn").style.display = "inline-block";
+  fetchAdHistory();
+}
+
+async function undoDelete() {
+  if (window.lastDeleted) {
+    await supabase.from("ad_history").insert([window.lastDeleted]);
+    window.lastDeleted = null;
+    fetchAdHistory();
+    document.getElementById("undoBtn").style.display = "none";
+  }
+}
+
+// 👤 Owner management
+async function addOwner() {
+  const name = document.getElementById("newOwner").value.trim();
+  if (!name || ownerList.includes(name)) return;
+  await supabase.from("ad_owners").insert([{ name }]);
+  fetchOwnerList();
+  document.getElementById("newOwner").value = "";
+}
+
+async function removeOwner(i) {
+  const name = ownerList[i];
+  await supabase.from("ad_owners").delete().eq("name", name);
+  fetchOwnerList();
+}
+
+window.addOwner = addOwner;
+window.removeOwner = removeOwner;
+window.deleteEntry = deleteEntry;
+window.undoDelete = undoDelete;
+
+// 🚀 โหลดข้อมูลเมื่อเปิดหน้า
+fetchAdHistory();
+fetchOwnerList();
+</script>
+
+</body>
+</html>
