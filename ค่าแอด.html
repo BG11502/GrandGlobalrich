@@ -62,27 +62,30 @@
     <select id="filterOwner" class="form-select w-auto"></select>
   </div>
 
-  <!-- ตารางย้อนหลัง -->
-  <div class="card p-4">
+  <!-- ข้อมูลย้อนหลัง พร้อมปุ่มเปิด/ปิด -->
+  <div class="d-flex justify-content-between align-items-center mb-2">
     <h5 class="text-secondary mb-3"><i class="bi bi-clock-history"></i> ข้อมูลย้อนหลัง</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-light">
-          <tr><th>วันที่</th><th>บัญชี</th><th>ID</th><th>เจ้าของ</th><th>สถานะ</th><th>ค่าใช้จ่าย</th><th>ต้นทุน/ซื้อ</th><th>ซื้อ</th><th>รายได้</th><th>ROAS</th><th>จัดการ</th></tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-        <tfoot>
-          <tr>
-            <td colspan="5">รวม</td>
-            <td id="sumSpend">0.00</td>
-            <td id="avgCost">0.00</td>
-            <td id="sumPurchase">0</td>
-            <td id="sumRevenue">0.00</td>
-            <td colspan="2"></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+    <button id="toggleHistoryBtn" class="btn btn-outline-primary btn-sm">ซ่อนข้อมูลย้อนหลัง</button>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped text-center align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>วันที่</th><th>บัญชี</th><th>ID</th><th>เจ้าของ</th><th>สถานะ</th><th>ค่าใช้จ่าย</th><th>ต้นทุน/ซื้อ</th><th>ซื้อ</th><th>รายได้</th><th>ROAS</th><th>จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5">รวม</td>
+          <td id="sumSpend">0.00</td>
+          <td id="avgCost">0.00</td>
+          <td id="sumPurchase">0</td>
+          <td id="sumRevenue">0.00</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
   </div>
 </div>
 
@@ -103,7 +106,7 @@ async function loadOwners() {
   list.innerHTML = "";
 
   if (data) {
-    data.forEach((o, i) => {
+    data.forEach((o) => {
       ownerSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
       filterSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
       list.innerHTML += `<div class="badge bg-secondary p-2">${o.name}
@@ -122,7 +125,11 @@ async function loadHistory() {
 
 function renderTable() {
   const tbody = document.getElementById("historyBody");
-  if (adData.length === 0) return tbody.innerHTML = '<tr><td colspan="11">ไม่มีข้อมูล</td></tr>';
+  if (adData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11">ไม่มีข้อมูล</td></tr>';
+    resetFooter();
+    return;
+  }
   tbody.innerHTML = "";
   let sumSpend = 0, sumCost = 0, sumPurchase = 0, sumRevenue = 0;
   adData.forEach((e, i) => {
@@ -147,19 +154,29 @@ function renderTable() {
   document.getElementById("sumRevenue").textContent = sumRevenue.toFixed(2);
 }
 
+function resetFooter() {
+  document.getElementById("sumSpend").textContent = "0.00";
+  document.getElementById("avgCost").textContent = "0.00";
+  document.getElementById("sumPurchase").textContent = "0";
+  document.getElementById("sumRevenue").textContent = "0.00";
+}
+
 async function addOwner() {
   const name = document.getElementById("newOwner").value.trim();
-  if (!name) return;
+  if (!name) return alert("กรุณาใส่ชื่อเจ้าของบัญชี");
   const { error } = await _supabase.from("ad_owners").insert([{ name }]);
-  if (error) return alert("เพิ่มไม่สำเร็จ");
+  if (error) return alert("เพิ่มเจ้าของบัญชีไม่สำเร็จ");
   document.getElementById("newOwner").value = "";
-  loadOwners();
+  await loadOwners();
+  await loadHistory();
 }
 
 async function removeOwner(name) {
   if (!confirm("ลบเจ้าของบัญชีนี้?")) return;
-  await _supabase.from("ad_owners").delete().eq("name", name);
-  loadOwners();
+  const { error } = await _supabase.from("ad_owners").delete().eq("name", name);
+  if (error) return alert("ลบเจ้าของบัญชีไม่สำเร็จ");
+  await loadOwners();
+  await loadHistory();
 }
 
 function editEntry(i) {
@@ -181,8 +198,9 @@ function editEntry(i) {
 async function deleteEntry(i) {
   if (!confirm("ลบข้อมูลนี้?")) return;
   const id = adData[i].id;
-  await _supabase.from("ad_history").delete().eq("id", id);
-  loadHistory();
+  const { error } = await _supabase.from("ad_history").delete().eq("id", id);
+  if (error) return alert("ลบข้อมูลไม่สำเร็จ");
+  await loadHistory();
 }
 
 document.getElementById("adForm").addEventListener("submit", async (e) => {
@@ -200,16 +218,35 @@ document.getElementById("adForm").addEventListener("submit", async (e) => {
     revenue: parseFloat(revenue.value) || 0,
     roas: parseFloat(roas.value) || 0,
   };
-  if (id) await _supabase.from("ad_history").update(entry).eq("id", id);
-  else await _supabase.from("ad_history").insert([entry]);
+  if (id) {
+    const { error } = await _supabase.from("ad_history").update(entry).eq("id", id);
+    if (error) return alert("แก้ไขข้อมูลไม่สำเร็จ");
+  } else {
+    const { error } = await _supabase.from("ad_history").insert([entry]);
+    if (error) return alert("บันทึกข้อมูลไม่สำเร็จ");
+  }
   document.getElementById("adForm").reset();
   document.getElementById("editId").value = "";
-  loadHistory();
+  await loadHistory();
 });
 
 document.getElementById("btnAddOwner").addEventListener("click", addOwner);
 document.getElementById("filterOwner").addEventListener("change", loadHistory);
 
+// ปุ่มเปิด/ปิดข้อมูลย้อนหลัง
+const historyTableDiv = document.querySelector(".table-responsive");
+const toggleBtn = document.getElementById("toggleHistoryBtn");
+toggleBtn.addEventListener("click", () => {
+  if (historyTableDiv.style.display === "none") {
+    historyTableDiv.style.display = "block";
+    toggleBtn.textContent = "ซ่อนข้อมูลย้อนหลัง";
+  } else {
+    historyTableDiv.style.display = "none";
+    toggleBtn.textContent = "แสดงข้อมูลย้อนหลัง";
+  }
+});
+
+// โหลดข้อมูลเริ่มต้น
 loadOwners();
 loadHistory();
 </script>
