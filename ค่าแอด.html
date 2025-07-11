@@ -157,14 +157,14 @@
   let ownerList = [];
   let lastDeleted = null;
 
-  // โหลดข้อมูลเจ้าของบัญชีจาก Supabase
+  // โหลดข้อมูลเจ้าของบัญชีจาก Supabase (ดึง id ด้วย)
   async function fetchOwnerList() {
-    const { data, error } = await supabase.from("ad_owners").select("name").order("name");
+    const { data, error } = await supabase.from("ad_owners").select("id, name").order("name");
     if (error) {
       console.error("Error fetching owners:", error);
       return;
     }
-    ownerList = data.map(o => o.name);
+    ownerList = data; // [{id, name}, ...]
     renderOwnerSelect();
   }
 
@@ -186,7 +186,7 @@
     ownerSelect.innerHTML = `<option disabled selected>เลือกเจ้าของบัญชี</option>`;
     filterOwner.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
 
-    ownerList.forEach(name => {
+    ownerList.forEach(({id, name}) => {
       ownerSelect.innerHTML += `<option value="${name}">${name}</option>`;
       filterOwner.innerHTML += `<option value="${name}">${name}</option>`;
     });
@@ -194,11 +194,11 @@
     // แสดง list เจ้าของบัญชีพร้อมปุ่มลบ
     const ownerListDiv = document.getElementById("ownerList");
     ownerListDiv.innerHTML = "";
-    ownerList.forEach((name, i) => {
+    ownerList.forEach(({id, name}) => {
       ownerListDiv.innerHTML += `
         <div class="badge bg-secondary p-2">
           ${name}
-          <button class="btn-close btn-sm ms-2" onclick="removeOwner(${i})"></button>
+          <button class="btn-close btn-sm ms-2" onclick="removeOwner('${id}', '${name}')"></button>
         </div>`;
     });
   }
@@ -290,7 +290,8 @@
   async function addOwner() {
     const name = document.getElementById("newOwner").value.trim();
     if (!name) return alert("กรุณากรอกชื่อเจ้าของบัญชี");
-    if (ownerList.includes(name)) return alert("ชื่อนี้มีอยู่แล้ว");
+    if (ownerList.some(o => o.name === name)) return alert("ชื่อนี้มีอยู่แล้ว");
+
     const { error } = await supabase.from("ad_owners").insert([{ name }]);
     if (error) {
       alert("เพิ่มเจ้าของบัญชีไม่สำเร็จ: " + error.message);
@@ -301,10 +302,9 @@
   }
 
   // ลบเจ้าของบัญชี
-  async function removeOwner(i) {
-    if (!confirm(`ลบเจ้าของบัญชี "${ownerList[i]}" ใช่หรือไม่?`)) return;
-    const name = ownerList[i];
-    const { error } = await supabase.from("ad_owners").delete().eq("name", name);
+  async function removeOwner(id, name) {
+    if (!confirm(`ลบเจ้าของบัญชี "${name}" ใช่หรือไม่?`)) return;
+    const { error } = await supabase.from("ad_owners").delete().eq("id", id);
     if (error) {
       alert("ลบเจ้าของบัญชีไม่สำเร็จ: " + error.message);
       return;
