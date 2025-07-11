@@ -209,7 +209,16 @@ function renderReport() {
     const entries = (byYearDate[year] || []).filter(e => {
       if (startDateFilter && e.date < startDateFilter) return false;
       if (endDateFilter && e.date > endDateFilter) return false;
-      if (selectedMonths.length && !selectedMonths.includes(e.date.slice(5, 7))) return false;
+      if (selectedMonths.length) {
+  const d = new Date(e.date);
+  let month = d.getMonth() + 1;
+  const date = d.getDate();
+  if (date >= 26) month++;
+  if (month > 12) month = 1;
+  const mStr = month.toString().padStart(2, '0');
+  if (!selectedMonths.includes(mStr)) return false;
+}
+
       return e.date >= start && e.date <= end;
     });
     let qty = 0, ret = 0, amt = 0, ref = 0;
@@ -231,7 +240,16 @@ function renderReport() {
   const dayEntries = (byYearDate[year] || []).filter(e => {
     if (startDateFilter && e.date < startDateFilter) return false;
     if (endDateFilter && e.date > endDateFilter) return false;
-    if (selectedMonths.length && !selectedMonths.includes(e.date.slice(5, 7))) return false;
+    if (selectedMonths.length) {
+  const d = new Date(e.date);
+  let month = d.getMonth() + 1;
+  const date = d.getDate();
+  if (date >= 26) month++; // ถ้าวันที่ ≥ 26 ให้เลื่อนไปเดือนถัดไป
+  if (month > 12) month = 1;
+  const mStr = month.toString().padStart(2, '0');
+  if (!selectedMonths.includes(mStr)) return false;
+}
+
     return true;
   });
   const dateMap = {};
