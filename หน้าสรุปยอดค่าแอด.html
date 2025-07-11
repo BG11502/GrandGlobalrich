@@ -2,231 +2,297 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <title>รายงานสรุปค่าแอด</title>
+  <title>สรุปค่าแอดรายเดือน</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
     body { background-color: #f8f9fa; }
-    .card { border-radius: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    .table tfoot td { font-weight: bold; background-color: #f1f1f1; }
+    .card { border-radius: 1rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+    .form-check-inline { margin-right: 1rem; }
   </style>
 </head>
 <body>
-<div class="container py-4">
-  <div class="mb-3 d-flex justify-content-between">
-    <a href="ค่าแอด.html" class="btn btn-outline-primary">🔙 กลับหน้าเก็บข้อมูล</a>
-    <a href="index.html" class="btn btn-outline-secondary">🏠 หน้าหลัก</a>
-  </div>
+  <div class="container py-4">
+    <div class="mb-3 text-start">
+      <a href="index.html" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> กลับหน้าหลัก
+      </a>
+    </div>
 
-  <h2 class="text-center text-primary mb-4">📊 รายงานสรุปค่าแอด</h2>
+    <h2 class="text-center text-primary mb-4">📊 สรุปค่าแอดรายเดือน</h2>
 
-  <!-- 🔍 ฟิลเตอร์ -->
-  <div class="card p-3 mb-4">
-    <div class="row g-3">
-      <div class="col-md-3">
-        <label class="form-label">เจ้าของบัญชี</label>
-        <select id="filterOwner" class="form-select"></select>
+    <!-- ฟิลเตอร์ -->
+    <div class="card p-4 mb-4">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">เลือกปี</label>
+          <select id="selectedYear" class="form-select"></select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">เลือกเดือน (หลายเดือน)</label>
+          <div id="monthCheckboxes" class="d-flex flex-wrap gap-2"></div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">เลือกช่วงวันที่</label>
+          <div class="input-group">
+            <input type="date" id="startDate" class="form-control" />
+            <span class="input-group-text">ถึง</span>
+            <input type="date" id="endDate" class="form-control" />
+          </div>
+        </div>
+        <div class="col-md-12 text-end pt-2">
+          <button class="btn btn-primary me-2" onclick="loadAndRender()">✅ แสดงรายงาน</button>
+          <button class="btn btn-outline-secondary" onclick="clearFilters()">❌ ล้างการกรอง</button>
+        </div>
       </div>
-      <div class="col-md-3">
-        <label class="form-label">ตั้งแต่วันที่</label>
-        <input type="date" id="filterStart" class="form-control" />
+    </div>
+
+    <!-- รายเดือน -->
+    <div class="card p-4 mb-4">
+      <h5 class="text-secondary mb-3"><i class="bi bi-calendar-month me-2"></i> รายละเอียดค่าแอดรายเดือน (26-25)</h5>
+      <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>ช่วงเดือน (26-25)</th>
+              <th>เจ้าของบัญชี</th>
+              <th>ค่าใช้จ่าย</th>
+              <th>ต้นทุน/ซื้อ</th>
+              <th>จำนวนซื้อ</th>
+              <th>รายได้</th>
+              <th>ROAS</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyReportBody"></tbody>
+          <tfoot id="monthlyFooter"></tfoot>
+        </table>
       </div>
-      <div class="col-md-3">
-        <label class="form-label">ถึงวันที่</label>
-        <input type="date" id="filterEnd" class="form-control" />
-      </div>
-      <div class="col-md-3 align-self-end">
-        <button class="btn btn-success w-100" id="btnRender">📈 แสดงรายงาน</button>
+    </div>
+
+    <!-- รายวัน -->
+    <div class="card p-4 mb-4">
+      <h5 class="text-secondary mb-3"><i class="bi bi-calendar2-week me-2"></i> รายละเอียดค่าแอดรายวัน</h5>
+      <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle">
+          <thead class="table-info">
+            <tr>
+              <th>วันที่</th>
+              <th>เจ้าของบัญชี</th>
+              <th>ค่าใช้จ่าย</th>
+              <th>ต้นทุน/ซื้อ</th>
+              <th>จำนวนซื้อ</th>
+              <th>รายได้</th>
+              <th>ROAS</th>
+            </tr>
+          </thead>
+          <tbody id="dailyReportBody"></tbody>
+          <tfoot id="dailyFooter"></tfoot>
+        </table>
       </div>
     </div>
   </div>
-
-  <!-- 📆 รายวัน -->
-  <div class="card p-4 mb-4">
-    <h5 class="text-secondary mb-3">📆 สรุปยอดรายวัน</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered text-center align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>วันที่</th>
-            <th>เจ้าของบัญชี</th>
-            <th>ค่าใช้จ่าย</th>
-            <th>ต้นทุน/ซื้อ</th>
-            <th>จำนวนซื้อ</th>
-            <th>รายได้</th>
-            <th>ROAS</th>
-          </tr>
-        </thead>
-        <tbody id="dailyReportBody"></tbody>
-        <tfoot id="dailyFooter"></tfoot>
-      </table>
-    </div>
-  </div>
-
-  <!-- 📅 รายเดือน -->
-  <div class="card p-4 mb-4">
-    <h5 class="text-secondary mb-3">🗓️ สรุปยอดรายเดือน</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered text-center align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>เดือน</th>
-            <th>เจ้าของบัญชี</th>
-            <th>ค่าใช้จ่าย</th>
-            <th>ต้นทุน/ซื้อ</th>
-            <th>จำนวนซื้อ</th>
-            <th>รายได้</th>
-            <th>ROAS</th>
-          </tr>
-        </thead>
-        <tbody id="monthlyReportBody"></tbody>
-        <tfoot id="monthlyFooter"></tfoot>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- ✅ โหลด Supabase ก่อน -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
+  // เชื่อม Supabase
   const supabaseUrl = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-  let adData = [];
+  // สร้างตัวเลือกปี ตั้งแต่ปีปัจจุบัน-5 ปี
+  function populateYearOptions() {
+    const select = document.getElementById('selectedYear');
+    const currentYear = new Date().getFullYear();
+    for(let y = currentYear; y >= currentYear - 5; y--) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      select.appendChild(opt);
+    }
+    select.value = currentYear;
+  }
 
-  async function loadOwners() {
-    const { data: owners } = await supabase.from('ad_owners').select('name').order('name');
-    const select = document.getElementById('filterOwner');
-    select.innerHTML = '<option value="ทั้งหมด">ทั้งหมด</option>';
-    if (owners && owners.length > 0) {
-      owners.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o.name;
-        opt.textContent = o.name;
-        select.appendChild(opt);
-      });
+  // สร้าง checkbox เดือน 12 เดือน
+  function populateMonthCheckboxes() {
+    const container = document.getElementById('monthCheckboxes');
+    const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    for(let i=1; i<=12; i++) {
+      const div = document.createElement('div');
+      div.className = "form-check form-check-inline";
+      div.innerHTML = `<input class="form-check-input" type="checkbox" id="month${i}" value="${i}" checked>
+                       <label class="form-check-label" for="month${i}">${monthNames[i-1]}</label>`;
+      container.appendChild(div);
     }
   }
 
+  // ฟังก์ชันแปลงวันที่เป็นช่วงเดือนแบบ 26-25
+  function getCustomMonthPeriod(dateStr) {
+    const d = new Date(dateStr);
+    let year = d.getFullYear();
+    let month = d.getMonth() + 1;
+    if(d.getDate() < 26) {
+      month -= 1;
+      if(month === 0) {
+        month = 12;
+        year -= 1;
+      }
+    }
+    return `${year}-${String(month).padStart(2,'0')}`;
+  }
+
+  // ฟังก์ชันกรุ๊ปข้อมูล (day หรือ month)
   function groupData(data, type) {
     const grouped = {};
-    data.forEach(e => {
-      const d = new Date(e.date);
-      const owner = e.owner || "ไม่ระบุ";
+    data.forEach(item => {
+      const owner = item.owner || "ไม่ระบุ";
       let key = "";
-
-      if (type === "day") {
-        key = d.toISOString().slice(0, 10);
-      } else if (type === "month") {
-        key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0');
+      if(type === 'day') {
+        key = new Date(item.date).toISOString().slice(0,10);
+      } else if(type === 'month') {
+        key = getCustomMonthPeriod(item.date);
       }
-
-      const groupKey = key + "|" + owner;
-
-      if (!grouped[groupKey]) {
-        grouped[groupKey] = {
-          period: key,
-          owner,
-          spend: 0,
-          cost: 0,
-          purchase: 0,
-          revenue: 0,
-          roasSum: 0,
-          roasCount: 0
-        };
+      const groupKey = key + '|' + owner;
+      if(!grouped[groupKey]) {
+        grouped[groupKey] = { period: key, owner, spend: 0, cost: 0, purchase: 0, revenue: 0, roasSum: 0, roasCount: 0 };
       }
-
-      grouped[groupKey].spend += +e.spend_total || 0;
-      grouped[groupKey].cost += +e.cost_per_purchase || 0;
-      grouped[groupKey].purchase += +e.purchases || 0;
-      grouped[groupKey].revenue += +e.revenue || 0;
-      grouped[groupKey].roasSum += +e.roas || 0;
+      grouped[groupKey].spend += +item.spend_total || 0;
+      grouped[groupKey].cost += +item.cost_per_purchase || 0;
+      grouped[groupKey].purchase += +item.purchases || 0;
+      grouped[groupKey].revenue += +item.revenue || 0;
+      grouped[groupKey].roasSum += +item.roas || 0;
       grouped[groupKey].roasCount += 1;
     });
-
     return Object.values(grouped);
   }
 
+  // แสดงข้อมูลในตาราง
   function renderGroupTable(data, bodyId, footerId) {
     const body = document.getElementById(bodyId);
     const footer = document.getElementById(footerId);
-    body.innerHTML = "";
-    footer.innerHTML = "";
+    body.innerHTML = '';
+    footer.innerHTML = '';
 
     let totalSpend = 0, totalCost = 0, totalPurchase = 0, totalRevenue = 0, totalRoasSum = 0, totalRoasCount = 0;
 
-    data.forEach(e => {
-      const avgRoas = e.roasCount > 0 ? e.roasSum / e.roasCount : 0;
+    data.forEach(row => {
+      const avgRoas = row.roasCount > 0 ? row.roasSum / row.roasCount : 0;
+      totalSpend += row.spend;
+      totalCost += row.cost;
+      totalPurchase += row.purchase;
+      totalRevenue += row.revenue;
+      totalRoasSum += row.roasSum;
+      totalRoasCount += row.roasCount;
 
-      totalSpend += e.spend;
-      totalCost += e.cost;
-      totalPurchase += e.purchase;
-      totalRevenue += e.revenue;
-      totalRoasSum += e.roasSum;
-      totalRoasCount += e.roasCount;
+      let periodText = row.period;
+      if(bodyId === 'monthlyReportBody') {
+        const [y,m] = row.period.split('-');
+        let year = parseInt(y), month = parseInt(m);
+        let nextMonth = month + 1, nextYear = year;
+        if(nextMonth > 12) { nextMonth = 1; nextYear++;}
+        const monthNames = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+        periodText = `26 ${monthNames[month-1]} ${year} - 25 ${monthNames[nextMonth-1]} ${nextYear}`;
+      }
 
       body.innerHTML += `
         <tr>
-          <td>${e.period}</td>
-          <td>${e.owner}</td>
-          <td>${e.spend.toFixed(2)}</td>
-          <td>${e.cost.toFixed(2)}</td>
-          <td>${e.purchase}</td>
-          <td>${e.revenue.toFixed(2)}</td>
+          <td>${periodText}</td>
+          <td>${row.owner}</td>
+          <td>${row.spend.toFixed(2)}</td>
+          <td>${row.cost.toFixed(2)}</td>
+          <td>${row.purchase}</td>
+          <td>${row.revenue.toFixed(2)}</td>
           <td>${avgRoas.toFixed(2)}</td>
-        </tr>`;
+        </tr>
+      `;
     });
 
-    if (data.length > 0) {
-      const avgRoasTotal = totalRoasCount > 0 ? totalRoasSum / totalRoasCount : 0;
-      footer.innerHTML = `
-        <tr>
-          <td colspan="2">รวม</td>
-          <td>${totalSpend.toFixed(2)}</td>
-          <td>${totalCost.toFixed(2)}</td>
-          <td>${totalPurchase}</td>
-          <td>${totalRevenue.toFixed(2)}</td>
-          <td>${avgRoasTotal.toFixed(2)}</td>
-        </tr>`;
-    }
+    // footer รวม
+    const avgRoasTotal = totalRoasCount > 0 ? totalRoasSum / totalRoasCount : 0;
+    footer.innerHTML = `
+      <tr class="table-dark fw-bold">
+        <td>รวม</td>
+        <td>-</td>
+        <td>${totalSpend.toFixed(2)}</td>
+        <td>${totalCost.toFixed(2)}</td>
+        <td>${totalPurchase}</td>
+        <td>${totalRevenue.toFixed(2)}</td>
+        <td>${avgRoasTotal.toFixed(2)}</td>
+      </tr>
+    `;
   }
 
-  async function loadData() {
-    const ownerFilter = document.getElementById("filterOwner").value;
-    const start = document.getElementById("filterStart").value;
-    const end = document.getElementById("filterEnd").value;
+  // โหลดข้อมูลและแสดงผล
+  async function loadAndRender() {
+    const year = document.getElementById('selectedYear').value;
+    const checkedMonths = Array.from(document.querySelectorAll('#monthCheckboxes input[type=checkbox]:checked')).map(cb => parseInt(cb.value));
+    const startDateVal = document.getElementById('startDate').value;
+    const endDateVal = document.getElementById('endDate').value;
 
-    let query = supabase.from('ad_history').select('*').order('date', { ascending: true });
+    if (!year) return alert('กรุณาเลือกปี');
 
-    if (ownerFilter && ownerFilter !== "ทั้งหมด") {
-      query = query.eq('owner', ownerFilter);
+    // สร้างช่วงวันที่ตามเดือน 26-25
+    let dateRanges = [];
+    if(startDateVal && endDateVal) {
+      dateRanges.push({start: new Date(startDateVal), end: new Date(endDateVal)});
+    } else {
+      for(const m of checkedMonths) {
+        let startYear = year, startMonth = m-2;
+        if(startMonth < 0) {
+          startMonth += 12;
+          startYear--;
+        }
+        const start = new Date(startYear, startMonth, 26);
+        const end = new Date(year, m-1, 25);
+        dateRanges.push({start, end});
+      }
     }
-    if (start) {
-      query = query.gte('date', start);
-    }
-    if (end) {
-      query = query.lte('date', end);
+
+    // ฟังก์ชันเช็ควันที่อยู่ในช่วงไหนบ้าง
+    function inDateRanges(dateStr) {
+      const d = new Date(dateStr);
+      return dateRanges.some(r => d >= r.start && d <= r.end);
     }
 
-    const { data, error } = await query;
+    // โหลดข้อมูลจาก Supabase
+    let { data, error } = await supabase
+      .from('ad_history')
+      .select('*')
+      .order('date', { ascending: true });
 
-    if (error) {
-      alert("โหลดข้อมูลผิดพลาด: " + error.message);
+    if(error) {
+      alert('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+      console.error(error);
       return;
     }
 
-    adData = data || [];
-    const dailyData = groupData(adData, "day");
-    const monthlyData = groupData(adData, "month");
-    renderGroupTable(dailyData, "dailyReportBody", "dailyFooter");
-    renderGroupTable(monthlyData, "monthlyReportBody", "monthlyFooter");
+    // กรองข้อมูลตามช่วงวันที่
+    data = data.filter(item => inDateRanges(item.date));
+
+    // แยกข้อมูลเป็นรายวันและรายเดือน (กลุ่ม owner + period)
+    const dailyGrouped = groupData(data, 'day');
+    const monthlyGrouped = groupData(data, 'month');
+
+    // แสดงตาราง
+    renderGroupTable(monthlyGrouped, 'monthlyReportBody', 'monthlyFooter');
+    renderGroupTable(dailyGrouped, 'dailyReportBody', 'dailyFooter');
   }
 
-  document.getElementById("btnRender").addEventListener("click", loadData);
+  function clearFilters() {
+    document.getElementById('startDate').value = '';
+    document.getElementById('endDate').value = '';
+    const checkboxes = document.querySelectorAll('#monthCheckboxes input[type=checkbox]');
+    checkboxes.forEach(cb => cb.checked = true);
+    const currentYear = new Date().getFullYear();
+    document.getElementById('selectedYear').value = currentYear;
+  }
 
-  loadOwners().then(loadData);
+  // Init
+  document.addEventListener('DOMContentLoaded', () => {
+    populateYearOptions();
+    populateMonthCheckboxes();
+    clearFilters();
+  });
 </script>
 </body>
 </html>
