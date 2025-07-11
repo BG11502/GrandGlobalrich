@@ -23,23 +23,16 @@
 <div class="container py-4">
   <h2 class="mb-4 text-primary text-center">📅 บันทึกข้อมูลโฆษณา</h2>
 
-  <!-- เพิ่มเจ้าของบัญชี -->
   <div class="mb-4">
     <label for="newOwner" class="form-label">เพิ่มชื่อเจ้าของบัญชีใหม่</label>
     <div class="input-group">
-      <input
-        type="text"
-        id="newOwner"
-        class="form-control"
-        placeholder="ชื่อเจ้าของบัญชีใหม่"
-      />
+      <input type="text" id="newOwner" class="form-control" placeholder="ชื่อเจ้าของบัญชีใหม่" />
       <button class="btn btn-success" id="btnAddOwner" type="button">
         <i class="bi bi-plus-circle"></i> เพิ่ม
       </button>
     </div>
   </div>
 
-  <!-- ฟอร์มบันทึกข้อมูล -->
   <form id="adForm" class="card p-4 mb-4 shadow-sm bg-white rounded">
     <div class="row g-3">
       <div class="col-md-4">
@@ -48,30 +41,16 @@
       </div>
       <div class="col-md-4">
         <label for="accountName" class="form-label">ชื่อบัญชี *</label>
-        <input
-          type="text"
-          id="accountName"
-          class="form-control"
-          placeholder="ชื่อบัญชี"
-          required
-        />
+        <input type="text" id="accountName" class="form-control" placeholder="ชื่อบัญชี" required />
       </div>
       <div class="col-md-4">
         <label for="accountId" class="form-label">ID บัญชี *</label>
-        <input
-          type="text"
-          id="accountId"
-          class="form-control"
-          placeholder="ID บัญชี"
-          required
-        />
+        <input type="text" id="accountId" class="form-control" placeholder="ID บัญชี" required />
       </div>
 
       <div class="col-md-4">
         <label for="owner" class="form-label">เจ้าของบัญชี *</label>
-        <select id="owner" class="form-select" required>
-          <!-- ตัวเลือกโหลดจาก JS -->
-        </select>
+        <select id="owner" class="form-select" required></select>
       </div>
 
       <div class="col-md-4">
@@ -84,67 +63,35 @@
 
       <div class="col-md-4">
         <label for="spendTotal" class="form-label">ค่าใช้จ่าย</label>
-        <input
-          type="number"
-          id="spendTotal"
-          class="form-control"
-          step="0.01"
-          placeholder="0.00"
-        />
+        <input type="number" id="spendTotal" class="form-control" step="0.01" placeholder="0.00" />
       </div>
 
       <div class="col-md-4">
         <label for="costPerPurchase" class="form-label">ต้นทุน/ซื้อ</label>
-        <input
-          type="number"
-          id="costPerPurchase"
-          class="form-control"
-          step="0.01"
-          placeholder="0.00"
-        />
+        <input type="number" id="costPerPurchase" class="form-control" step="0.01" placeholder="0.00" />
       </div>
 
       <div class="col-md-4">
         <label for="purchases" class="form-label">จำนวนซื้อ</label>
-        <input
-          type="number"
-          id="purchases"
-          class="form-control"
-          placeholder="0"
-        />
+        <input type="number" id="purchases" class="form-control" placeholder="0" />
       </div>
 
       <div class="col-md-4">
         <label for="revenue" class="form-label">รายได้</label>
-        <input
-          type="number"
-          id="revenue"
-          class="form-control"
-          step="0.01"
-          placeholder="0.00"
-        />
+        <input type="number" id="revenue" class="form-control" step="0.01" placeholder="0.00" />
       </div>
 
       <div class="col-md-4">
         <label for="roas" class="form-label">ROAS</label>
-        <input
-          type="number"
-          id="roas"
-          class="form-control"
-          step="0.01"
-          placeholder="0.00"
-        />
+        <input type="number" id="roas" class="form-control" step="0.01" placeholder="0.00" />
       </div>
     </div>
 
     <div class="mt-4 text-end">
-      <button type="submit" class="btn btn-primary btn-lg">
-        💾 บันทึกข้อมูล
-      </button>
+      <button type="submit" class="btn btn-primary btn-lg">💾 บันทึกข้อมูล</button>
     </div>
   </form>
 
-  <!-- ตารางข้อมูลย้อนหลัง -->
   <h3 class="mb-3">ข้อมูลย้อนหลัง</h3>
   <div class="table-responsive shadow-sm bg-white rounded p-3">
     <table
@@ -170,18 +117,22 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const supabaseUrl = "https://vzxttbvwukpsxqdaulvo.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U";
+  const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U";
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
   async function fetchOwners() {
-    const { data, error } = await supabase.from("ad_owners").select("id,name").order("name");
+    const { data, error } = await supabase
+      .from("ad_owners")
+      .select("id,name")
+      .order("name");
     if (error) {
       alert("โหลดเจ้าของบัญชีผิดพลาด: " + error.message);
       return;
     }
     const ownerSelect = document.getElementById("owner");
     ownerSelect.innerHTML = "";
-    data.forEach(o => {
+    data.forEach((o) => {
       ownerSelect.innerHTML += `<option value="${o.name}">${o.name}</option>`;
     });
   }
@@ -232,7 +183,10 @@
   }
 
   async function fetchAdHistory() {
-    const { data, error } = await supabase.from("ad_history").select("*").order("date", { ascending: false });
+    const { data, error } = await supabase
+      .from("ad_history")
+      .select("*")
+      .order("date", { ascending: false });
     if (error) {
       alert("โหลดข้อมูลโฆษณาผิดพลาด: " + error.message);
       return;
@@ -243,7 +197,7 @@
   function renderHistory(data) {
     const tbody = document.querySelector("#historyTable tbody");
     tbody.innerHTML = "";
-    data.forEach(item => {
+    data.forEach((item) => {
       tbody.innerHTML += `
         <tr>
           <td>${item.date}</td>
@@ -272,7 +226,7 @@
     fetchAdHistory();
   }
 
-  document.getElementById("adForm").addEventListener("submit", async e => {
+  document.getElementById("adForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const entry = {
       date: document.getElementById("date").value,
