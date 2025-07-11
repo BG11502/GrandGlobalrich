@@ -2,278 +2,231 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <title>บันทึกข้อมูลโฆษณา</title>
+  <title>รายงานสรุปค่าแอด</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     body { background-color: #f8f9fa; }
-    .card { border-radius: 1rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+    .card { border-radius: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     .table tfoot td { font-weight: bold; background-color: #f1f1f1; }
-    .btn-icon { display: inline-flex; align-items: center; gap: 0.4em; }
-    .btn-outline-secondary:hover { background-color: #e2e6ea; }
   </style>
 </head>
 <body>
 <div class="container py-4">
-  <div class="d-flex justify-content-between mb-4">
-    <a href="index.html" class="btn btn-outline-primary btn-icon"><i class="bi bi-house-door"></i> หน้าหลัก</a>
-    <a href="หน้าสรุปยอดค่าแอด.html" class="btn btn-outline-secondary btn-icon"><i class="bi bi-graph-up-arrow"></i> สรุปยอดค่าแอด</a>
+  <div class="mb-3 d-flex justify-content-between">
+    <a href="ค่าแอด.html" class="btn btn-outline-primary">🔙 กลับหน้าเก็บข้อมูล</a>
+    <a href="index.html" class="btn btn-outline-secondary">🏠 หน้าหลัก</a>
   </div>
 
-  <h2 class="text-center mb-4 text-primary">📅 บันทึกข้อมูลโฆษณา</h2>
+  <h2 class="text-center text-primary mb-4">📊 รายงานสรุปค่าแอด</h2>
 
-  <!-- จัดการเจ้าของบัญชี -->
+  <!-- 🔍 ฟิลเตอร์ -->
   <div class="card p-3 mb-4">
-    <h5 class="mb-3">👤 จัดการชื่อเจ้าของบัญชี</h5>
-    <div class="input-group">
-      <input type="text" id="newOwner" class="form-control" placeholder="พิมพ์ชื่อเจ้าของบัญชีใหม่" />
-      <button class="btn btn-success" id="btnAddOwner"><i class="bi bi-plus-circle"></i> เพิ่ม</button>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">เจ้าของบัญชี</label>
+        <select id="filterOwner" class="form-select"></select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">ตั้งแต่วันที่</label>
+        <input type="date" id="filterStart" class="form-control" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">ถึงวันที่</label>
+        <input type="date" id="filterEnd" class="form-control" />
+      </div>
+      <div class="col-md-3 align-self-end">
+        <button class="btn btn-success w-100" id="btnRender">📈 แสดงรายงาน</button>
+      </div>
     </div>
-    <div id="ownerList" class="d-flex flex-wrap gap-2 mt-3"></div>
   </div>
 
-  <!-- ฟอร์มบันทึก -->
+  <!-- 📆 รายวัน -->
   <div class="card p-4 mb-4">
-    <form id="adForm">
-      <input type="hidden" id="editId" />
-      <div class="row g-3">
-        <div class="col-md-3"><label class="form-label">วันที่</label><input type="date" id="date" class="form-control" required /></div>
-        <div class="col-md-3"><label class="form-label">ชื่อบัญชี</label><input type="text" id="accountName" class="form-control" required /></div>
-        <div class="col-md-3"><label class="form-label">ID บัญชี</label><input type="text" id="accountId" class="form-control" required /></div>
-        <div class="col-md-3"><label class="form-label">เจ้าของบัญชี</label><select id="owner" class="form-select" required></select></div>
-        <div class="col-md-3"><label class="form-label">สถานะบัญชี</label><select id="status" class="form-select"><option>ใช้งานปกติ</option><option>ระงับ</option></select></div>
-        <div class="col-md-3"><label class="form-label">ค่าใช้จ่าย</label><input type="number" id="spendTotal" class="form-control" step="0.01" value="0" /></div>
-        <div class="col-md-3"><label class="form-label">ต้นทุน/ซื้อ</label><input type="number" id="costPerPurchase" class="form-control" step="0.01" value="0" /></div>
-        <div class="col-md-3"><label class="form-label">จำนวนซื้อ</label><input type="number" id="purchases" class="form-control" value="0" /></div>
-        <div class="col-md-3"><label class="form-label">รายได้</label><input type="number" id="revenue" class="form-control" step="0.01" value="0" /></div>
-        <div class="col-md-3"><label class="form-label">ROAS</label><input type="number" id="roas" class="form-control" step="0.01" value="0" /></div>
-      </div>
-      <div class="mt-4 text-end">
-        <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save"></i> บันทึกข้อมูล</button>
-      </div>
-    </form>
-  </div>
-
-  <!-- ฟิลเตอร์ -->
-  <div class="mb-3 d-flex justify-content-between align-items-center">
-    <label class="form-label">กรองโดยเจ้าของบัญชี</label>
-    <select id="filterOwner" class="form-select w-auto"></select>
-  </div>
-
-  <!-- ปุ่มแสดง/ซ่อนข้อมูลย้อนหลัง -->
-  <div class="mb-3 text-end">
-    <button id="toggleHistoryBtn" class="btn btn-outline-secondary">ซ่อนข้อมูลย้อนหลัง</button>
-  </div>
-
-  <!-- ปุ่ม Undo ลบข้อมูลล่าสุด -->
-  <div id="undoContainer" class="mb-3 text-center" style="display:none;">
-    <button id="undoBtn" class="btn btn-sm btn-warning">ยกเลิกการลบข้อมูลล่าสุด</button>
-  </div>
-
-  <!-- ตารางย้อนหลัง -->
-  <div class="card p-4">
-    <h5 class="text-secondary mb-3"><i class="bi bi-clock-history"></i> ข้อมูลย้อนหลัง</h5>
+    <h5 class="text-secondary mb-3">📆 สรุปยอดรายวัน</h5>
     <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
+      <table class="table table-bordered text-center align-middle">
         <thead class="table-light">
-          <tr><th>วันที่</th><th>บัญชี</th><th>ID</th><th>เจ้าของ</th><th>สถานะ</th><th>ค่าใช้จ่าย</th><th>ต้นทุน/ซื้อ</th><th>ซื้อ</th><th>รายได้</th><th>ROAS</th><th>จัดการ</th></tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-        <tfoot>
           <tr>
-            <td colspan="5">รวม</td>
-            <td id="sumSpend">0.00</td>
-            <td id="avgCost">0.00</td>
-            <td id="sumPurchase">0</td>
-            <td id="sumRevenue">0.00</td>
-            <td colspan="2"></td>
+            <th>วันที่</th>
+            <th>เจ้าของบัญชี</th>
+            <th>ค่าใช้จ่าย</th>
+            <th>ต้นทุน/ซื้อ</th>
+            <th>จำนวนซื้อ</th>
+            <th>รายได้</th>
+            <th>ROAS</th>
           </tr>
-        </tfoot>
+        </thead>
+        <tbody id="dailyReportBody"></tbody>
+        <tfoot id="dailyFooter"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- 📅 รายเดือน -->
+  <div class="card p-4 mb-4">
+    <h5 class="text-secondary mb-3">🗓️ สรุปยอดรายเดือน</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered text-center align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>เดือน</th>
+            <th>เจ้าของบัญชี</th>
+            <th>ค่าใช้จ่าย</th>
+            <th>ต้นทุน/ซื้อ</th>
+            <th>จำนวนซื้อ</th>
+            <th>รายได้</th>
+            <th>ROAS</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyReportBody"></tbody>
+        <tfoot id="monthlyFooter"></tfoot>
       </table>
     </div>
   </div>
 </div>
 
+<!-- ✅ โหลด Supabase ก่อน -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
 <script>
-const supabaseUrl = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
-const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+  const supabaseUrl = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-let adData = [];
-let lastDeletedEntry = null;
+  let adData = [];
 
-const historyTableDiv = document.querySelector(".table-responsive");
-const toggleBtn = document.getElementById("toggleHistoryBtn");
-
-// โหลดสถานะจาก localStorage
-function loadHistoryVisibility() {
-  const visible = localStorage.getItem("historyVisible");
-  if (visible === "false") {
-    historyTableDiv.style.display = "none";
-    toggleBtn.textContent = "แสดงข้อมูลย้อนหลัง";
-  } else {
-    historyTableDiv.style.display = "block";
-    toggleBtn.textContent = "ซ่อนข้อมูลย้อนหลัง";
+  async function loadOwners() {
+    const { data: owners } = await supabase.from('ad_owners').select('name').order('name');
+    const select = document.getElementById('filterOwner');
+    select.innerHTML = '<option value="ทั้งหมด">ทั้งหมด</option>';
+    if (owners && owners.length > 0) {
+      owners.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.name;
+        opt.textContent = o.name;
+        select.appendChild(opt);
+      });
+    }
   }
-}
 
-// บันทึกสถานะและ toggle
-toggleBtn.addEventListener("click", () => {
-  if (historyTableDiv.style.display === "none") {
-    historyTableDiv.style.display = "block";
-    toggleBtn.textContent = "ซ่อนข้อมูลย้อนหลัง";
-    localStorage.setItem("historyVisible", "true");
-  } else {
-    historyTableDiv.style.display = "none";
-    toggleBtn.textContent = "แสดงข้อมูลย้อนหลัง";
-    localStorage.setItem("historyVisible", "false");
-  }
-});
+  function groupData(data, type) {
+    const grouped = {};
+    data.forEach(e => {
+      const d = new Date(e.date);
+      const owner = e.owner || "ไม่ระบุ";
+      let key = "";
 
-function showUndoButton(show) {
-  const undoContainer = document.getElementById("undoContainer");
-  undoContainer.style.display = show ? "block" : "none";
-}
+      if (type === "day") {
+        key = d.toISOString().slice(0, 10);
+      } else if (type === "month") {
+        key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0');
+      }
 
-async function loadOwners() {
-  const { data } = await _supabase.from('ad_owners').select('name');
-  const ownerSel = document.getElementById("owner");
-  const filterSel = document.getElementById("filterOwner");
-  const list = document.getElementById("ownerList");
-  ownerSel.innerHTML = `<option disabled selected>เลือกเจ้าของบัญชี</option>`;
-  filterSel.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
-  list.innerHTML = "";
+      const groupKey = key + "|" + owner;
 
-  if (data) {
-    data.forEach((o) => {
-      ownerSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
-      filterSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
-      list.innerHTML += `<div class="badge bg-secondary p-2">${o.name}
-        <button class="btn-close btn-sm ms-2" onclick="removeOwner('${o.name}')"></button></div>`;
+      if (!grouped[groupKey]) {
+        grouped[groupKey] = {
+          period: key,
+          owner,
+          spend: 0,
+          cost: 0,
+          purchase: 0,
+          revenue: 0,
+          roasSum: 0,
+          roasCount: 0
+        };
+      }
+
+      grouped[groupKey].spend += +e.spend_total || 0;
+      grouped[groupKey].cost += +e.cost_per_purchase || 0;
+      grouped[groupKey].purchase += +e.purchases || 0;
+      grouped[groupKey].revenue += +e.revenue || 0;
+      grouped[groupKey].roasSum += +e.roas || 0;
+      grouped[groupKey].roasCount += 1;
     });
+
+    return Object.values(grouped);
   }
-}
 
-async function loadHistory() {
-  const filter = document.getElementById("filterOwner").value;
-  let { data } = await _supabase.from("ad_history").select("*").order("date", { ascending: false });
-  adData = data || [];
-  if (filter !== "ทั้งหมด") adData = adData.filter(e => e.owner === filter);
-  renderTable();
-  showUndoButton(lastDeletedEntry !== null);
-}
+  function renderGroupTable(data, bodyId, footerId) {
+    const body = document.getElementById(bodyId);
+    const footer = document.getElementById(footerId);
+    body.innerHTML = "";
+    footer.innerHTML = "";
 
-function renderTable() {
-  const tbody = document.getElementById("historyBody");
-  if (adData.length === 0) return tbody.innerHTML = '<tr><td colspan="11">ไม่มีข้อมูล</td></tr>';
-  tbody.innerHTML = "";
-  let sumSpend = 0, sumCost = 0, sumPurchase = 0, sumRevenue = 0;
-  adData.forEach((e, i) => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${e.date}</td><td>${e.account_name}</td><td>${e.account_id}</td><td>${e.owner}</td><td>${e.status}</td>
-        <td>${(+e.spend_total).toFixed(2)}</td><td>${(+e.cost_per_purchase).toFixed(2)}</td><td>${e.purchases}</td>
-        <td>${(+e.revenue).toFixed(2)}</td><td>${(+e.roas).toFixed(2)}</td>
-        <td>
-          <button class="btn btn-sm btn-warning" onclick="editEntry(${i})"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-sm btn-danger" onclick="deleteEntry(${i})"><i class="bi bi-trash"></i></button>
-        </td>
-      </tr>`;
-    sumSpend += +e.spend_total;
-    sumCost += +e.cost_per_purchase;
-    sumPurchase += +e.purchases;
-    sumRevenue += +e.revenue;
-  });
-  document.getElementById("sumSpend").textContent = sumSpend.toFixed(2);
-  document.getElementById("avgCost").textContent = (adData.length ? sumCost / adData.length : 0).toFixed(2);
-  document.getElementById("sumPurchase").textContent = sumPurchase;
-  document.getElementById("sumRevenue").textContent = sumRevenue.toFixed(2);
-}
+    let totalSpend = 0, totalCost = 0, totalPurchase = 0, totalRevenue = 0, totalRoasSum = 0, totalRoasCount = 0;
 
-async function addOwner() {
-  const name = document.getElementById("newOwner").value.trim();
-  if (!name) return;
-  const { error } = await _supabase.from("ad_owners").insert([{ name }]);
-  if (error) return alert("เพิ่มไม่สำเร็จ");
-  document.getElementById("newOwner").value = "";
-  loadOwners();
-}
+    data.forEach(e => {
+      const avgRoas = e.roasCount > 0 ? e.roasSum / e.roasCount : 0;
 
-async function removeOwner(name) {
-  if (!confirm("ลบเจ้าของบัญชีนี้?")) return;
-  await _supabase.from("ad_owners").delete().eq("name", name);
-  loadOwners();
-}
+      totalSpend += e.spend;
+      totalCost += e.cost;
+      totalPurchase += e.purchase;
+      totalRevenue += e.revenue;
+      totalRoasSum += e.roasSum;
+      totalRoasCount += e.roasCount;
 
-function editEntry(i) {
-  const e = adData[i];
-  document.getElementById("editId").value = e.id;
-  date.value = e.date;
-  accountName.value = e.account_name;
-  accountId.value = e.account_id;
-  owner.value = e.owner;
-  status.value = e.status;
-  spendTotal.value = e.spend_total;
-  costPerPurchase.value = e.cost_per_purchase;
-  purchases.value = e.purchases;
-  revenue.value = e.revenue;
-  roas.value = e.roas;
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
+      body.innerHTML += `
+        <tr>
+          <td>${e.period}</td>
+          <td>${e.owner}</td>
+          <td>${e.spend.toFixed(2)}</td>
+          <td>${e.cost.toFixed(2)}</td>
+          <td>${e.purchase}</td>
+          <td>${e.revenue.toFixed(2)}</td>
+          <td>${avgRoas.toFixed(2)}</td>
+        </tr>`;
+    });
 
-async function deleteEntry(i) {
-  if (!confirm("ลบข้อมูลนี้?")) return;
-  const id = adData[i].id;
-  lastDeletedEntry = adData[i]; // เก็บข้อมูลก่อนลบเผื่อ Undo
-  const { error } = await _supabase.from("ad_history").delete().eq("id", id);
-  if (error) {
-    alert("ลบข้อมูลไม่สำเร็จ: " + error.message);
-    lastDeletedEntry = null;
-    return;
+    if (data.length > 0) {
+      const avgRoasTotal = totalRoasCount > 0 ? totalRoasSum / totalRoasCount : 0;
+      footer.innerHTML = `
+        <tr>
+          <td colspan="2">รวม</td>
+          <td>${totalSpend.toFixed(2)}</td>
+          <td>${totalCost.toFixed(2)}</td>
+          <td>${totalPurchase}</td>
+          <td>${totalRevenue.toFixed(2)}</td>
+          <td>${avgRoasTotal.toFixed(2)}</td>
+        </tr>`;
+    }
   }
-  loadHistory();
-  showUndoButton(true);
-}
 
-document.getElementById("undoBtn").addEventListener("click", async () => {
-  if (!lastDeletedEntry) return;
-  const { error } = await _supabase.from("ad_history").insert([lastDeletedEntry]);
-  if (error) return alert("คืนข้อมูลไม่สำเร็จ: " + error.message);
-  lastDeletedEntry = null;
-  showUndoButton(false);
-  loadHistory();
-});
+  async function loadData() {
+    const ownerFilter = document.getElementById("filterOwner").value;
+    const start = document.getElementById("filterStart").value;
+    const end = document.getElementById("filterEnd").value;
 
-document.getElementById("adForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const id = document.getElementById("editId").value;
-  const entry = {
-    date: date.value,
-    account_name: accountName.value,
-    account_id: accountId.value,
-    owner: owner.value,
-    status: status.value,
-    spend_total: parseFloat(spendTotal.value) || 0,
-    cost_per_purchase: parseFloat(costPerPurchase.value) || 0,
-    purchases: parseInt(purchases.value) || 0,
-    revenue: parseFloat(revenue.value) || 0,
-    roas: parseFloat(roas.value) || 0,
-  };
-  if (id) await _supabase.from("ad_history").update(entry).eq("id", id);
-  else await _supabase.from("ad_history").insert([entry]);
-  document.getElementById("adForm").reset();
-  document.getElementById("editId").value = "";
-  loadHistory();
-});
+    let query = supabase.from('ad_history').select('*').order('date', { ascending: true });
 
-document.getElementById("btnAddOwner").addEventListener("click", addOwner);
-document.getElementById("filterOwner").addEventListener("change", loadHistory);
+    if (ownerFilter && ownerFilter !== "ทั้งหมด") {
+      query = query.eq('owner', ownerFilter);
+    }
+    if (start) {
+      query = query.gte('date', start);
+    }
+    if (end) {
+      query = query.lte('date', end);
+    }
 
-loadOwners();
-loadHistory();
-loadHistoryVisibility();
+    const { data, error } = await query;
+
+    if (error) {
+      alert("โหลดข้อมูลผิดพลาด: " + error.message);
+      return;
+    }
+
+    adData = data || [];
+    const dailyData = groupData(adData, "day");
+    const monthlyData = groupData(adData, "month");
+    renderGroupTable(dailyData, "dailyReportBody", "dailyFooter");
+    renderGroupTable(monthlyData, "monthlyReportBody", "monthlyFooter");
+  }
+
+  document.getElementById("btnRender").addEventListener("click", loadData);
+
+  loadOwners().then(loadData);
 </script>
 </body>
 </html>
