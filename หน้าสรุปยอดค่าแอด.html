@@ -11,6 +11,8 @@
     body { background-color: #f8f9fa; }
     .card { border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     .form-check-inline { margin-right: 1rem; }
+    /* ทำ checkbox เดือนให้กดง่ายและสวย */
+    #monthCheckboxes .form-check-input { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -25,7 +27,7 @@
 
     <!-- ฟิลเตอร์ -->
     <div class="card p-4 mb-4">
-      <div class="row g-3">
+      <div class="row g-3 align-items-end">
         <div class="col-md-3">
           <label class="form-label">เลือกปี</label>
           <select id="selectedYear" class="form-select"></select>
@@ -59,7 +61,14 @@
           </thead>
           <tbody id="monthlyCompareBody"></tbody>
           <tfoot class="table-dark fw-bold">
-            <tr><td>รวม</td><td id="sumMonthlyAdCost">฿0.00</td><td id="sumMonthlyCost">฿0.00</td><td id="sumMonthlyQty">0</td><td id="sumMonthlyRev">฿0.00</td><td id="sumMonthlyROAS">0.00</td></tr>
+            <tr>
+              <td>รวม</td>
+              <td id="sumMonthlyAdCost">฿0.00</td>
+              <td id="sumMonthlyCost">฿0.00</td>
+              <td id="sumMonthlyQty">0</td>
+              <td id="sumMonthlyRev">฿0.00</td>
+              <td id="sumMonthlyROAS">0.00</td>
+            </tr>
           </tfoot>
         </table>
       </div>
@@ -82,7 +91,9 @@
     <div class="card p-4 mb-4">
       <h5 class="text-secondary mb-3"><i class="bi bi-box-seam me-2"></i> รายละเอียด SKU รายวัน</h5>
       <div class="row mb-3">
-        <div class="col-md-6"><input type="text" class="form-control" id="searchSKU" placeholder="🔍 ค้นหา SKU" oninput="renderReport()" /></div>
+        <div class="col-md-6">
+          <input type="text" class="form-control" id="searchSKU" placeholder="🔍 ค้นหา SKU" oninput="renderReport()" />
+        </div>
         <div class="col-md-6 text-end">
           <select id="sortOption" class="form-select w-auto d-inline" onchange="renderReport()">
             <option value="">🔃 เรียงตาม...</option>
@@ -102,7 +113,12 @@
           <tbody id="dailyCompareBody"></tbody>
           <tfoot class="table-dark fw-bold">
             <tr>
-              <td>รวม</td><td id="sumAdCost">฿0.00</td><td id="sumCost">฿0.00</td><td id="sumQty">0</td><td id="sumRevenue">฿0.00</td><td id="sumROAS">0.00</td>
+              <td>รวม</td>
+              <td id="sumAdCost">฿0.00</td>
+              <td id="sumCost">฿0.00</td>
+              <td id="sumQty">0</td>
+              <td id="sumRevenue">฿0.00</td>
+              <td id="sumROAS">0.00</td>
             </tr>
           </tfoot>
         </table>
@@ -111,11 +127,11 @@
   </div>
 
 <script>
-  // กำหนด Supabase URL และ key ของคุณ
   const supabaseUrl = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
+  // รูปแบบเงินสกุลบาท
   function formatCurrency(n) {
     return '฿' + n.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
   }
@@ -128,27 +144,24 @@
     renderReport();
   }
 
+  // โหลดปีและเดือนจากฐานข้อมูล ad_history
   async function fetchYearsAndMonthsFromSupabase() {
     const { data, error } = await supabase
       .from('ad_history')
       .select('date')
       .order('date', { ascending: true });
-
     if (error) {
       alert('เกิดข้อผิดพลาดในการโหลดข้อมูลปีและเดือน');
       console.error(error);
       return { years: [], months: [] };
     }
-
     const yearSet = new Set();
     const monthSet = new Set();
-
     data.forEach(item => {
       const d = new Date(item.date);
       yearSet.add(d.getFullYear());
       monthSet.add(d.getMonth() + 1);
     });
-
     const years = Array.from(yearSet).sort((a, b) => b - a);
     const months = Array.from(monthSet).sort((a, b) => a - b);
     return { years, months };
@@ -181,8 +194,8 @@
     });
   }
 
+  // ดึงข้อมูล ad_history จาก supabase ตามวันที่ (option filter)
   async function fetchAdHistory() {
-    // ดึงข้อมูลทั้งหมดในช่วงวันที่ที่กรอง (หรือทั้งหมดถ้าไม่กรอง)
     let query = supabase.from('ad_history').select('*');
 
     const startDateInput = document.getElementById("startDate").value;
@@ -254,34 +267,29 @@
     });
 
     // แปลง monthlyMap เป็น array พร้อมคำนวณ ROAS
-    const monthlyData = Object.entries(monthlyMap).map(([month, val]) => {
-      return {
-        month,
-        adcost: val.adcost,
-        cost: val.cost,
-        qty: val.qty,
-        revenue: val.revenue,
-        roas: calcROAS(val.adcost, val.revenue),
-      };
-    });
+    const monthlyData = Object.entries(monthlyMap).map(([month, val]) => ({
+      month,
+      adcost: val.adcost,
+      cost: val.cost,
+      qty: val.qty,
+      revenue: val.revenue,
+      roas: calcROAS(val.adcost, val.revenue),
+    }));
 
     // สรุปรายวัน
-    const dailyData = filteredData.map(item => {
-      return {
-        date: item.date,
-        adcost: item.ad_cost || 0,
-        cost: item.cost || 0,
-        qty: item.qty || 0,
-        revenue: item.revenue || 0,
-        roas: calcROAS(item.ad_cost, item.revenue),
-      };
-    });
+    const dailyData = filteredData.map(item => ({
+      date: item.date,
+      adcost: item.ad_cost || 0,
+      cost: item.cost || 0,
+      qty: item.qty || 0,
+      revenue: item.revenue || 0,
+      roas: calcROAS(item.ad_cost, item.revenue),
+    }));
 
     // รายละเอียด SKU รายวัน (filter by SKU search)
     const searchText = document.getElementById("searchSKU").value.toLowerCase();
     let skuData = [];
     filteredData.forEach(item => {
-      // สมมติ sku อยู่ใน item.sku (ปรับถ้าโครงสร้างต่าง)
       if (!item.sku) return;
       if (searchText && !item.sku.toLowerCase().includes(searchText)) return;
       skuData.push({
@@ -316,7 +324,7 @@
     document.getElementById("dailyCompareBody").innerHTML = "";
 
     // แสดงข้อมูลรายเดือน
-    let sumMonthlyAdCost=0, sumMonthlyCost=0, sumMonthlyQty=0, sumMonthlyRev=0, sumMonthlyROAS=0;
+    let sumMonthlyAdCost=0, sumMonthlyCost=0, sumMonthlyQty=0, sumMonthlyRev=0;
     monthlyData.forEach(item => {
       const row = document.createElement("tr");
       row.innerHTML = `
@@ -333,7 +341,7 @@
       sumMonthlyQty += item.qty;
       sumMonthlyRev += item.revenue;
     });
-    sumMonthlyROAS = calcROAS(sumMonthlyAdCost, sumMonthlyRev);
+    const sumMonthlyROAS = calcROAS(sumMonthlyAdCost, sumMonthlyRev);
 
     document.getElementById("sumMonthlyAdCost").innerText = formatCurrency(sumMonthlyAdCost);
     document.getElementById("sumMonthlyCost").innerText = formatCurrency(sumMonthlyCost);
@@ -356,7 +364,7 @@
     });
 
     // แสดงข้อมูล SKU รายวัน
-    let sumAdCost=0, sumCost=0, sumQty=0, sumRevenue=0, sumROAS=0;
+    let sumAdCost=0, sumCost=0, sumQty=0, sumRevenue=0;
     skuData.forEach(item => {
       const row = document.createElement("tr");
       row.innerHTML = `
@@ -373,7 +381,7 @@
       sumQty += item.qty;
       sumRevenue += item.revenue;
     });
-    sumROAS = calcROAS(sumAdCost, sumRevenue);
+    const sumROAS = calcROAS(sumAdCost, sumRevenue);
 
     document.getElementById("sumAdCost").innerText = formatCurrency(sumAdCost);
     document.getElementById("sumCost").innerText = formatCurrency(sumCost);
