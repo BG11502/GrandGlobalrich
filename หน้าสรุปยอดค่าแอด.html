@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>รายงานสรุปค่าแอด</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
     body { background-color: #f8f9fa; }
     .card { border-radius: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -29,14 +29,14 @@
       </div>
       <div class="col-md-3">
         <label class="form-label">ตั้งแต่วันที่</label>
-        <input type="date" id="filterStart" class="form-control">
+        <input type="date" id="filterStart" class="form-control" />
       </div>
       <div class="col-md-3">
         <label class="form-label">ถึงวันที่</label>
-        <input type="date" id="filterEnd" class="form-control">
+        <input type="date" id="filterEnd" class="form-control" />
       </div>
       <div class="col-md-3 align-self-end">
-        <button class="btn btn-success w-100" onclick="renderReports()">📈 แสดงรายงาน</button>
+        <button class="btn btn-success w-100" id="btnRender">📈 แสดงรายงาน</button>
       </div>
     </div>
   </div>
@@ -86,119 +86,147 @@
   </div>
 </div>
 
+<!-- ✅ โหลด Supabase ก่อน -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
 <script>
-const adHistory = JSON.parse(localStorage.getItem("adHistory") || "[]");
+  const supabaseUrl = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-function groupData(data, type) {
-  const grouped = {};
-  data.forEach(e => {
-    const d = new Date(e.date);
-    const owner = e.owner || "ไม่ระบุ";
-    let key = "";
+  let adData = [];
 
-    if (type === "day") {
-      key = d.toISOString().slice(0, 10);
-    } else if (type === "month") {
-      key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0');
+  async function loadOwners() {
+    const { data: owners } = await supabase.from('ad_owners').select('name').order('name');
+    const select = document.getElementById('filterOwner');
+    select.innerHTML = '<option value="ทั้งหมด">ทั้งหมด</option>';
+    if (owners && owners.length > 0) {
+      owners.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.name;
+        opt.textContent = o.name;
+        select.appendChild(opt);
+      });
     }
-
-    const groupKey = key + "|" + owner;
-
-    if (!grouped[groupKey]) {
-      grouped[groupKey] = {
-        period: key,
-        owner,
-        spend: 0,
-        cost: 0,
-        purchase: 0,
-        revenue: 0,
-        roasSum: 0,
-        roasCount: 0
-      };
-    }
-
-    grouped[groupKey].spend += e.spendTotal || 0;
-    grouped[groupKey].cost += e.costPerPurchase || 0; // รวมต้นทุน/ซื้อ
-    grouped[groupKey].purchase += e.purchases || 0;
-    grouped[groupKey].revenue += e.revenue || 0;
-    grouped[groupKey].roasSum += e.roas || 0;
-    grouped[groupKey].roasCount += 1;
-  });
-
-  return Object.values(grouped);
-}
-
-function renderReports() {
-  const ownerFilter = document.getElementById("filterOwner").value;
-  const start = document.getElementById("filterStart").value;
-  const end = document.getElementById("filterEnd").value;
-
-  const filtered = adHistory.filter(e => {
-    const matchOwner = ownerFilter === "ทั้งหมด" || e.owner === ownerFilter;
-    const d = new Date(e.date);
-    const inRange = (!start || d >= new Date(start)) && (!end || d <= new Date(end));
-    return matchOwner && inRange;
-  });
-
-  renderGroupTable(groupData(filtered, "day"), "dailyReportBody", "dailyFooter");
-  renderGroupTable(groupData(filtered, "month"), "monthlyReportBody", "monthlyFooter");
-}
-
-function renderGroupTable(data, bodyId, footerId) {
-  const body = document.getElementById(bodyId);
-  const footer = document.getElementById(footerId);
-  body.innerHTML = "";
-  footer.innerHTML = "";
-
-  let totalSpend = 0, totalCost = 0, totalPurchase = 0, totalRevenue = 0, totalRoasSum = 0, totalRoasCount = 0;
-
-  data.forEach(e => {
-    const avgRoas = e.roasCount > 0 ? e.roasSum / e.roasCount : 0;
-
-    totalSpend += e.spend;
-    totalCost += e.cost; // รวมต้นทุน/ซื้อ
-    totalPurchase += e.purchase;
-    totalRevenue += e.revenue;
-    totalRoasSum += e.roasSum;
-    totalRoasCount += e.roasCount;
-
-    body.innerHTML += `
-      <tr>
-        <td>${e.period}</td>
-        <td>${e.owner}</td>
-        <td>${e.spend.toFixed(2)}</td>
-        <td>${e.cost.toFixed(2)}</td>
-        <td>${e.purchase}</td>
-        <td>${e.revenue.toFixed(2)}</td>
-        <td>${avgRoas.toFixed(2)}</td>
-      </tr>`;
-  });
-
-  if (data.length > 0) {
-    const avgRoasTotal = totalRoasCount > 0 ? totalRoasSum / totalRoasCount : 0;
-    footer.innerHTML = `
-      <tr>
-        <td colspan="2">รวม</td>
-        <td>${totalSpend.toFixed(2)}</td>
-        <td>${totalCost.toFixed(2)}</td>
-        <td>${totalPurchase}</td>
-        <td>${totalRevenue.toFixed(2)}</td>
-        <td>${avgRoasTotal.toFixed(2)}</td>
-      </tr>`;
   }
-}
 
-function loadOwnerOptions() {
-  const owners = new Set(adHistory.map(e => e.owner || "ไม่ระบุ"));
-  const select = document.getElementById("filterOwner");
-  select.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
-  owners.forEach(o => {
-    select.innerHTML += `<option value="${o}">${o}</option>`;
-  });
-}
+  function groupData(data, type) {
+    const grouped = {};
+    data.forEach(e => {
+      const d = new Date(e.date);
+      const owner = e.owner || "ไม่ระบุ";
+      let key = "";
 
-loadOwnerOptions();
-renderReports();
+      if (type === "day") {
+        key = d.toISOString().slice(0, 10);
+      } else if (type === "month") {
+        key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0');
+      }
+
+      const groupKey = key + "|" + owner;
+
+      if (!grouped[groupKey]) {
+        grouped[groupKey] = {
+          period: key,
+          owner,
+          spend: 0,
+          cost: 0,
+          purchase: 0,
+          revenue: 0,
+          roasSum: 0,
+          roasCount: 0
+        };
+      }
+
+      grouped[groupKey].spend += +e.spend_total || 0;
+      grouped[groupKey].cost += +e.cost_per_purchase || 0;
+      grouped[groupKey].purchase += +e.purchases || 0;
+      grouped[groupKey].revenue += +e.revenue || 0;
+      grouped[groupKey].roasSum += +e.roas || 0;
+      grouped[groupKey].roasCount += 1;
+    });
+
+    return Object.values(grouped);
+  }
+
+  function renderGroupTable(data, bodyId, footerId) {
+    const body = document.getElementById(bodyId);
+    const footer = document.getElementById(footerId);
+    body.innerHTML = "";
+    footer.innerHTML = "";
+
+    let totalSpend = 0, totalCost = 0, totalPurchase = 0, totalRevenue = 0, totalRoasSum = 0, totalRoasCount = 0;
+
+    data.forEach(e => {
+      const avgRoas = e.roasCount > 0 ? e.roasSum / e.roasCount : 0;
+
+      totalSpend += e.spend;
+      totalCost += e.cost;
+      totalPurchase += e.purchase;
+      totalRevenue += e.revenue;
+      totalRoasSum += e.roasSum;
+      totalRoasCount += e.roasCount;
+
+      body.innerHTML += `
+        <tr>
+          <td>${e.period}</td>
+          <td>${e.owner}</td>
+          <td>${e.spend.toFixed(2)}</td>
+          <td>${e.cost.toFixed(2)}</td>
+          <td>${e.purchase}</td>
+          <td>${e.revenue.toFixed(2)}</td>
+          <td>${avgRoas.toFixed(2)}</td>
+        </tr>`;
+    });
+
+    if (data.length > 0) {
+      const avgRoasTotal = totalRoasCount > 0 ? totalRoasSum / totalRoasCount : 0;
+      footer.innerHTML = `
+        <tr>
+          <td colspan="2">รวม</td>
+          <td>${totalSpend.toFixed(2)}</td>
+          <td>${totalCost.toFixed(2)}</td>
+          <td>${totalPurchase}</td>
+          <td>${totalRevenue.toFixed(2)}</td>
+          <td>${avgRoasTotal.toFixed(2)}</td>
+        </tr>`;
+    }
+  }
+
+  async function loadData() {
+    const ownerFilter = document.getElementById("filterOwner").value;
+    const start = document.getElementById("filterStart").value;
+    const end = document.getElementById("filterEnd").value;
+
+    let query = supabase.from('ad_history').select('*').order('date', { ascending: true });
+
+    if (ownerFilter && ownerFilter !== "ทั้งหมด") {
+      query = query.eq('owner', ownerFilter);
+    }
+    if (start) {
+      query = query.gte('date', start);
+    }
+    if (end) {
+      query = query.lte('date', end);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      alert("โหลดข้อมูลผิดพลาด: " + error.message);
+      return;
+    }
+
+    adData = data || [];
+    const dailyData = groupData(adData, "day");
+    const monthlyData = groupData(adData, "month");
+    renderGroupTable(dailyData, "dailyReportBody", "dailyFooter");
+    renderGroupTable(monthlyData, "monthlyReportBody", "monthlyFooter");
+  }
+
+  document.getElementById("btnRender").addEventListener("click", loadData);
+
+  loadOwners().then(loadData);
 </script>
 </body>
 </html>
