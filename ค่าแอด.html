@@ -67,6 +67,11 @@
     <button id="toggleHistoryBtn" class="btn btn-outline-secondary">ซ่อนข้อมูลย้อนหลัง</button>
   </div>
 
+  <!-- ปุ่ม Undo ลบข้อมูลล่าสุด -->
+  <div id="undoContainer" class="mb-3 text-center" style="display:none;">
+    <button id="undoBtn" class="btn btn-sm btn-warning">ยกเลิกการลบข้อมูลล่าสุด</button>
+  </div>
+
   <!-- ตารางย้อนหลัง -->
   <div class="card p-4">
     <h5 class="text-secondary mb-3"><i class="bi bi-clock-history"></i> ข้อมูลย้อนหลัง</h5>
@@ -97,6 +102,7 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 let adData = [];
+let lastDeletedEntry = null;
 
 const historyTableDiv = document.querySelector(".table-responsive");
 const toggleBtn = document.getElementById("toggleHistoryBtn");
@@ -126,8 +132,10 @@ toggleBtn.addEventListener("click", () => {
   }
 });
 
-// เรียกตอนเริ่มโหลดหน้าเว็บ
-loadHistoryVisibility();
+function showUndoButton(show) {
+  const undoContainer = document.getElementById("undoContainer");
+  undoContainer.style.display = show ? "block" : "none";
+}
 
 async function loadOwners() {
   const { data } = await _supabase.from('ad_owners').select('name');
@@ -154,6 +162,7 @@ async function loadHistory() {
   adData = data || [];
   if (filter !== "ทั้งหมด") adData = adData.filter(e => e.owner === filter);
   renderTable();
+  showUndoButton(lastDeletedEntry !== null);
 }
 
 function renderTable() {
@@ -217,9 +226,25 @@ function editEntry(i) {
 async function deleteEntry(i) {
   if (!confirm("ลบข้อมูลนี้?")) return;
   const id = adData[i].id;
-  await _supabase.from("ad_history").delete().eq("id", id);
+  lastDeletedEntry = adData[i]; // เก็บข้อมูลก่อนลบเผื่อ Undo
+  const { error } = await _supabase.from("ad_history").delete().eq("id", id);
+  if (error) {
+    alert("ลบข้อมูลไม่สำเร็จ: " + error.message);
+    lastDeletedEntry = null;
+    return;
+  }
   loadHistory();
+  showUndoButton(true);
 }
+
+document.getElementById("undoBtn").addEventListener("click", async () => {
+  if (!lastDeletedEntry) return;
+  const { error } = await _supabase.from("ad_history").insert([lastDeletedEntry]);
+  if (error) return alert("คืนข้อมูลไม่สำเร็จ: " + error.message);
+  lastDeletedEntry = null;
+  showUndoButton(false);
+  loadHistory();
+});
 
 document.getElementById("adForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -248,6 +273,7 @@ document.getElementById("filterOwner").addEventListener("change", loadHistory);
 
 loadOwners();
 loadHistory();
+loadHistoryVisibility();
 </script>
 </body>
 </html>
