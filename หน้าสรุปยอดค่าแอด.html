@@ -96,37 +96,50 @@
   function clearDayFilter() {
     document.getElementById("startDate").value = "";
     document.getElementById("endDate").value = "";
+    // เคลียร์ checkbox เดือนทั้งหมด
+    document.querySelectorAll("#monthCheckboxes input[type=checkbox]").forEach(cb => cb.checked = false);
     renderReport();
   }
 
-  async function fetchYearsAndMonthsFromSupabase() {
+  async function fetchYearsFromSupabase() {
     const { data, error } = await supabase
       .from('ad_history')
       .select('date')
       .order('date', { ascending: true });
 
     if (error) {
-      alert('เกิดข้อผิดพลาดในการโหลดข้อมูลปีและเดือน');
+      alert('เกิดข้อผิดพลาดในการโหลดข้อมูลปี');
       console.error(error);
-      return { years: [], months: [] };
+      return [];
     }
 
     const yearSet = new Set();
-    const monthSet = new Set();
-
     data.forEach(item => {
       const d = new Date(item.date);
       yearSet.add(d.getFullYear());
-      monthSet.add(d.getMonth() + 1);
     });
 
-    const years = Array.from(yearSet).sort((a, b) => b - a);
-    const months = Array.from(monthSet).sort((a, b) => a - b);
-    return { years, months };
+    return Array.from(yearSet).sort((a, b) => b - a);
   }
 
-  async function populateYearAndMonthFromSupabase() {
-    const { years, months } = await fetchYearsAndMonthsFromSupabase();
+  function renderMonthCheckboxes() {
+    // แสดง checkbox เดือนครบ 12 เดือนเสมอ
+    const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const container = document.getElementById('monthCheckboxes');
+    container.innerHTML = '';
+    for (let m = 1; m <= 12; m++) {
+      const div = document.createElement('div');
+      div.className = "form-check form-check-inline";
+      div.innerHTML = `
+        <input class="form-check-input" type="checkbox" id="month${m}" value="${m}">
+        <label class="form-check-label" for="month${m}">${monthNames[m - 1]}</label>
+      `;
+      container.appendChild(div);
+    }
+  }
+
+  async function populateYearAndMonth() {
+    const years = await fetchYearsFromSupabase();
 
     const selectYear = document.getElementById('selectedYear');
     selectYear.innerHTML = '';
@@ -136,20 +149,9 @@
       opt.textContent = y;
       selectYear.appendChild(opt);
     });
-    if (years.length > 0) selectYear.value = years[0];
+    if(years.length > 0) selectYear.value = years[0];
 
-    const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-    const container = document.getElementById('monthCheckboxes');
-    container.innerHTML = '';
-    months.forEach(m => {
-      const div = document.createElement('div');
-      div.className = "form-check form-check-inline";
-      div.innerHTML = `
-        <input class="form-check-input" type="checkbox" id="month${m}" value="${m}" checked>
-        <label class="form-check-label" for="month${m}">${monthNames[m - 1]}</label>
-      `;
-      container.appendChild(div);
-    });
+    renderMonthCheckboxes();
   }
 
   async function fetchAdHistory() {
@@ -167,8 +169,21 @@
     return data || [];
   }
 
-  function calcROAS(adcost, revenue) {
-    return revenue === 0 ? 0 : adcost ? revenue / adcost : 0;
+  function calcROAS(spend, revenue) {
+    return spend === 0 ? 0 : revenue / spend;
+  }
+
+  // ฟังก์ชันคำนวณช่วงวันที่ 26-25 ของเดือน (ตามกติกา)
+  function getCompanyMonthRange(year, month) {
+    let startYear = year;
+    let startMonth = month - 2;
+    if (startMonth < 0) {
+      startMonth += 12;
+      startYear--;
+    }
+    const startDate = new Date(startYear, startMonth, 26);
+    const endDate = new Date(year, month - 1, 25);
+    return { start: startDate.toISOString().slice(0, 10), end: endDate.toISOString().slice(0, 10) };
   }
 
   async function renderReport() {
@@ -179,22 +194,18 @@
     const startDateInput = document.getElementById("startDate").value;
     const endDateInput = document.getElementById("endDate").value;
 
-    // สร้างช่วงวันที่ 26-25 ของแต่ละเดือนที่เลือก (ตามกติกาเดิม)
+    // สร้างช่วงวันที่ตามกติกา 26-25 สำหรับแต่ละเดือนที่เลือก
     let dateRanges = [];
     if (startDateInput && endDateInput) {
       dateRanges.push({ start: new Date(startDateInput), end: new Date(endDateInput) });
-    } else {
+    } else if(selectedMonths.length > 0) {
       for (const month of selectedMonths) {
-        let startYear = selectedYear;
-        let startMonth = month - 2;
-        if (startMonth < 0) {
-          startMonth += 12;
-          startYear--;
-        }
-        const start = new Date(startYear, startMonth, 26);
-        const end = new Date(selectedYear, month - 1, 25);
-        dateRanges.push({ start, end });
+        const { start, end } = getCompanyMonthRange(selectedYear, month);
+        dateRanges.push({ start: new Date(start), end: new Date(end) });
       }
+    } else {
+      // ถ้าไม่เลือกเดือนและไม่มีวันที่ ให้เลือกทั้งปี (1 ม.ค. ถึง 31 ธ.ค.)
+      dateRanges.push({ start: new Date(selectedYear, 0, 1), end: new Date(selectedYear, 11, 31) });
     }
 
     function isInRanges(dateStr) {
@@ -202,7 +213,7 @@
       return dateRanges.some(range => d >= range.start && d <= range.end);
     }
 
-    // กรองข้อมูลตามช่วงวันที่ที่เลือก
+    // กรองข้อมูลตามช่วงวันที่
     const filteredData = allData.filter(item => isInRanges(item.date));
 
     // สรุปข้อมูลรายเดือน
@@ -248,8 +259,10 @@
     })).sort((a,b) => new Date(a.date) - new Date(b.date));
 
     // เคลียร์ตารางก่อนแสดงผล
-    document.getElementById("monthlyCompareBody").innerHTML = "";
-    document.getElementById("dailySummaryBody").innerHTML = "";
+    const monthlyBody = document.getElementById("monthlyCompareBody");
+    const dailyBody = document.getElementById("dailySummaryBody");
+    monthlyBody.innerHTML = "";
+    dailyBody.innerHTML = "";
 
     // แสดงข้อมูลรายเดือน
     let sumMonthlyAdCost=0, sumMonthlyCost=0, sumMonthlyQty=0, sumMonthlyRev=0;
@@ -263,7 +276,7 @@
         <td>${formatCurrency(item.revenue)}</td>
         <td>${item.roas.toFixed(2)}</td>
       `;
-      document.getElementById("monthlyCompareBody").appendChild(row);
+      monthlyBody.appendChild(row);
       sumMonthlyAdCost += item.adcost;
       sumMonthlyCost += item.cost;
       sumMonthlyQty += item.qty;
@@ -288,7 +301,7 @@
         <td>${formatCurrency(item.revenue)}</td>
         <td>${item.roas.toFixed(2)}</td>
       `;
-      document.getElementById("dailySummaryBody").appendChild(row);
+      dailyBody.appendChild(row);
       sumDailyAdCost += item.adcost;
       sumDailyCost += item.cost;
       sumDailyQty += item.qty;
@@ -303,9 +316,10 @@
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
-    await populateYearAndMonthFromSupabase();
+    await populateYearAndMonth();
     renderReport();
   });
+
 </script>
 </body>
 </html>
