@@ -94,116 +94,112 @@ function formatNumber(n) {
 function clearDayFilter() {
   document.getElementById("startDate").value = "";
   document.getElementById("endDate").value = "";
+  document.querySelectorAll("#monthCheckboxes input").forEach(cb => cb.checked = false);
   renderReport();
 }
 
-async function fetchAdHistory() {
-  let query = supabase.from('ad_history').select('*');
-  const startDate = document.getElementById("startDate").value;
-  const endDate = document.getElementById("endDate").value;
-  if (startDate) query = query.gte('date', startDate);
-  if (endDate) query = query.lte('date', endDate);
-  const { data, error } = await query.order('date', { ascending: true });
-  return data || [];
-}
-
-function calcROAS(adcost, revenue) {
-  return revenue === 0 ? 0 : adcost ? revenue / adcost : 0;
+function getMonthRangeByCompanyRule(year, month) {
+  let startYear = year, startMonth = month - 1;
+  if (startMonth === 0) { startMonth = 12; startYear--; }
+  const start = new Date(startYear, startMonth - 1, 26);
+  const end = new Date(year, month - 1, 25);
+  return { start, end };
 }
 
 async function renderReport() {
-  const allData = await fetchAdHistory();
-  const year = parseInt(document.getElementById("selectedYear").value);
-  const selectedMonths = Array.from(document.querySelectorAll("#monthCheckboxes input:checked")).map(cb => parseInt(cb.value));
+  const { data, error } = await supabase.from("ad_history").select("*").order("date");
+  if (error || !data) return alert("ดึงข้อมูลไม่สำเร็จ");
+  console.log("data from supabase", data); // <<<<< เพิ่มตรงนี้
 
-  let dateRanges = [];
-  const startDate = document.getElementById("startDate").value;
-  const endDate = document.getElementById("endDate").value;
-  if (startDate && endDate) {
-    dateRanges.push({ start: new Date(startDate), end: new Date(endDate) });
+  const year = +document.getElementById("selectedYear").value;
+  const selectedMonths = Array.from(document.querySelectorAll("#monthCheckboxes input:checked")).map(cb => +cb.value);
+  const startInput = document.getElementById("startDate").value;
+  const endInput = document.getElementById("endDate").value;
+
+  let ranges = [];
+  if (startInput && endInput) {
+    ranges.push({ start: new Date(startInput), end: new Date(endInput) });
   } else {
     for (const m of selectedMonths) {
-      let sm = m - 1, sy = year;
-      if (sm === 0) { sm = 12; sy--; }
-      dateRanges.push({
-        start: new Date(sy, sm - 1, 26),
-        end: new Date(year, m - 1, 25)
-      });
+      const { start, end } = getMonthRangeByCompanyRule(year, m);
+      ranges.push({ start, end });
     }
   }
-  const isInRange = dateStr => dateRanges.some(r => {
-    const d = new Date(dateStr);
-    return d >= r.start && d <= r.end;
-  });
-  const data = allData.filter(d => isInRange(d.date));
+
+  const isInRanges = (dateStr) => {
+    const d = new Date(dateStr.split('T')[0]);
+
+    return ranges.length === 0 || ranges.some(r => d >= r.start && d <= r.end);
+  };
+
+  const filtered = data.filter(row => isInRanges(row.date));
 
   // รายเดือน
-  const monthlyMap = {};
-  for (const d of data) {
-    const dt = new Date(d.date);
-    const key = dt.getFullYear() + "-" + ("0" + (dt.getMonth() + 1)).slice(-2);
-    if (!monthlyMap[key]) monthlyMap[key] = { adcost: 0, cost: 0, qty: 0, revenue: 0 };
-    monthlyMap[key].adcost += +d.spend_total || 0;
-    monthlyMap[key].cost += (+d.cost_per_purchase * +d.purchases) || 0;
-    monthlyMap[key].qty += +d.purchases || 0;
-    monthlyMap[key].revenue += +d.revenue || 0;
-  }
-  const monthlyCompareBody = document.getElementById("monthlyCompareBody");
-  monthlyCompareBody.innerHTML = "";
-  let sumAd = 0, sumCost = 0, sumQty = 0, sumRev = 0;
-  Object.entries(monthlyMap).forEach(([m, v]) => {
-    sumAd += v.adcost; sumCost += v.cost; sumQty += v.qty; sumRev += v.revenue;
-    monthlyCompareBody.innerHTML += `<tr><td>${m}</td><td>${formatCurrency(v.adcost)}</td><td>${formatCurrency(v.cost)}</td><td>${formatNumber(v.qty)}</td><td>${formatCurrency(v.revenue)}</td><td>${calcROAS(v.adcost, v.revenue).toFixed(2)}</td></tr>`;
+  const monthly = {};
+  filtered.forEach(row => {
+    const d = new Date(row.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!monthly[key]) monthly[key] = { ad: 0, cost: 0, qty: 0, rev: 0 };
+    monthly[key].ad += +row.spend_total || 0;
+    monthly[key].cost += (+row.cost_per_purchase * +row.purchases) || 0;
+    monthly[key].qty += +row.purchases || 0;
+    monthly[key].rev += +row.revenue || 0;
   });
-  document.getElementById("sumMonthlyAdCost").innerText = formatCurrency(sumAd);
-  document.getElementById("sumMonthlyCost").innerText = formatCurrency(sumCost);
-  document.getElementById("sumMonthlyQty").innerText = formatNumber(sumQty);
-  document.getElementById("sumMonthlyRev").innerText = formatCurrency(sumRev);
-  document.getElementById("sumMonthlyROAS").innerText = calcROAS(sumAd, sumRev).toFixed(2);
+  const tbodyM = document.getElementById("monthlyCompareBody");
+  tbodyM.innerHTML = "";
+  let smAd = 0, smCost = 0, smQty = 0, smRev = 0;
+  Object.entries(monthly).sort().forEach(([k, v]) => {
+    smAd += v.ad; smCost += v.cost; smQty += v.qty; smRev += v.rev;
+    tbodyM.innerHTML += `<tr><td>${k}</td><td>${formatCurrency(v.ad)}</td><td>${formatCurrency(v.cost)}</td><td>${formatNumber(v.qty)}</td><td>${formatCurrency(v.rev)}</td><td>${(v.ad ? v.rev / v.ad : 0).toFixed(2)}</td></tr>`;
+  });
+  document.getElementById("sumMonthlyAdCost").innerText = formatCurrency(smAd);
+  document.getElementById("sumMonthlyCost").innerText = formatCurrency(smCost);
+  document.getElementById("sumMonthlyQty").innerText = formatNumber(smQty);
+  document.getElementById("sumMonthlyRev").innerText = formatCurrency(smRev);
+  document.getElementById("sumMonthlyROAS").innerText = (smAd ? smRev / smAd : 0).toFixed(2);
 
   // รายวัน
-  const dailyMap = {};
-  for (const d of data) {
-    const date = d.date;
-    if (!dailyMap[date]) dailyMap[date] = { adcost: 0, cost: 0, qty: 0, revenue: 0 };
-    dailyMap[date].adcost += +d.spend_total || 0;
-    dailyMap[date].cost += (+d.cost_per_purchase * +d.purchases) || 0;
-    dailyMap[date].qty += +d.purchases || 0;
-    dailyMap[date].revenue += +d.revenue || 0;
-  }
-  const dailySummaryBody = document.getElementById("dailySummaryBody");
-  dailySummaryBody.innerHTML = "";
-  let sumDA = 0, sumDC = 0, sumDQ = 0, sumDR = 0;
-  Object.entries(dailyMap).sort().forEach(([date, v]) => {
-    sumDA += v.adcost; sumDC += v.cost; sumDQ += v.qty; sumDR += v.revenue;
-    dailySummaryBody.innerHTML += `<tr><td>${date}</td><td>${formatCurrency(v.adcost)}</td><td>${formatCurrency(v.cost)}</td><td>${formatNumber(v.qty)}</td><td>${formatCurrency(v.revenue)}</td><td>${calcROAS(v.adcost, v.revenue).toFixed(2)}</td></tr>`;
+  const daily = {};
+  filtered.forEach(row => {
+    const key = row.date;
+    if (!daily[key]) daily[key] = { ad: 0, cost: 0, qty: 0, rev: 0 };
+    daily[key].ad += +row.spend_total || 0;
+    daily[key].cost += (+row.cost_per_purchase * +row.purchases) || 0;
+    daily[key].qty += +row.purchases || 0;
+    daily[key].rev += +row.revenue || 0;
   });
-  document.getElementById("sumDailyAdCost").innerText = formatCurrency(sumDA);
-  document.getElementById("sumDailyCost").innerText = formatCurrency(sumDC);
-  document.getElementById("sumDailyQty").innerText = formatNumber(sumDQ);
-  document.getElementById("sumDailyRev").innerText = formatCurrency(sumDR);
-  document.getElementById("sumDailyROAS").innerText = calcROAS(sumDA, sumDR).toFixed(2);
+  const tbodyD = document.getElementById("dailySummaryBody");
+  tbodyD.innerHTML = "";
+  let sdAd = 0, sdCost = 0, sdQty = 0, sdRev = 0;
+  Object.entries(daily).sort().forEach(([k, v]) => {
+    sdAd += v.ad; sdCost += v.cost; sdQty += v.qty; sdRev += v.rev;
+    tbodyD.innerHTML += `<tr><td>${k}</td><td>${formatCurrency(v.ad)}</td><td>${formatCurrency(v.cost)}</td><td>${formatNumber(v.qty)}</td><td>${formatCurrency(v.rev)}</td><td>${(v.ad ? v.rev / v.ad : 0).toFixed(2)}</td></tr>`;
+  });
+  document.getElementById("sumDailyAdCost").innerText = formatCurrency(sdAd);
+  document.getElementById("sumDailyCost").innerText = formatCurrency(sdCost);
+  document.getElementById("sumDailyQty").innerText = formatNumber(sdQty);
+  document.getElementById("sumDailyRev").innerText = formatCurrency(sdRev);
+  document.getElementById("sumDailyROAS").innerText = (sdAd ? sdRev / sdAd : 0).toFixed(2);
 }
 
 const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 document.addEventListener("DOMContentLoaded", async () => {
-  const { data } = await supabase.from('ad_history').select('date').order('date');
-  const years = [...new Set((data || []).map(r => new Date(r.date).getFullYear()))];
-  const yearSel = document.getElementById("selectedYear");
+  const { data } = await supabase.from("ad_history").select("date").order("date");
+  const years = [...new Set((data || []).map(d => new Date(d.date).getFullYear()))];
+  const ySel = document.getElementById("selectedYear");
+  ySel.innerHTML = "";
   years.sort().reverse().forEach(y => {
-    const o = document.createElement("option"); o.value = y; o.textContent = y; yearSel.appendChild(o);
+    const o = document.createElement("option"); o.value = y; o.textContent = y; ySel.appendChild(o);
   });
-  if (years.length) yearSel.value = years[0];
+  if (years.length) ySel.value = years[0];
 
-  const container = document.getElementById("monthCheckboxes");
-  container.innerHTML = "";
+  const box = document.getElementById("monthCheckboxes");
+  box.innerHTML = "";
   for (let i = 0; i < 12; i++) {
-    const m = i + 1;
-    container.innerHTML += `<div class="form-check form-check-inline">
-      <input class="form-check-input" type="checkbox" id="month${m}" value="${m}" checked>
-      <label class="form-check-label" for="month${m}">${monthNames[i]}</label></div>`;
+    box.innerHTML += `<div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="month${i+1}" value="${i+1}" checked>
+      <label class="form-check-label" for="month${i+1}">${monthNames[i]}</label></div>`;
   }
-
   renderReport();
 });
 </script>
