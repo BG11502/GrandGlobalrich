@@ -86,6 +86,43 @@ const supabase = window.supabase.createClient(
 );
 
 // ...ฟังก์ชัน renderReport() และฟังก์ชันอื่นให้ใช้ตามไฟล์ล่าสุดที่คุณเคยให้ (จะเรียกใช้ supabase ได้ถูกต้อง)
+  document.addEventListener("DOMContentLoaded", async () => {
+  const { data, error } = await supabase
+    .from("ad_history")
+    .select("date")
+    .order("date", { ascending: true });
+
+  if (error) {
+    console.error("ไม่สามารถโหลดข้อมูลปีจาก Supabase ได้", error);
+    return;
+  }
+
+  const years = [...new Set((data || []).map(d => new Date(d.date).getFullYear()))];
+  const ySel = document.getElementById("selectedYear");
+  ySel.innerHTML = "";
+  years.sort().reverse().forEach(y => {
+    const o = document.createElement("option");
+    o.value = y;
+    o.textContent = y;
+    ySel.appendChild(o);
+  });
+
+  if (years.length) ySel.value = years[0];
+
+  const box = document.getElementById("monthCheckboxes");
+  box.innerHTML = "";
+  const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+  for (let i = 0; i < 12; i++) {
+    box.innerHTML += `<div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="month${i+1}" value="${i+1}" checked>
+      <label class="form-check-label" for="month${i+1}">${monthNames[i]}</label>
+    </div>`;
+  }
+
+  renderReport();
+});
+
 </script>
+  
 </body>
 </html>
