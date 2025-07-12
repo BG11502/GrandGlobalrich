@@ -1,0 +1,256 @@
+<!-- ใช้แทนทั้งไฟล์ .html เดิมของคุณได้เลย -->
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>รายงานยอดขายแต่ละร้าน</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { background-color: #f8f9fa; }
+    .card-header-icon { font-size: 1.25rem; margin-right: 0.5rem; }
+  </style>
+</head>
+<body class="p-4">
+<div class="container">
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h3 class="mb-4"><i class="bi bi-shop-window"></i> รายงานยอดขายแต่ละร้าน</h3>
+      <div class="row g-3 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label">ปี</label>
+          <select id="yearSelect" class="form-select"></select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">เดือน (เลือกได้หลายเดือน)</label>
+          <select id="monthSelect" class="form-select" multiple></select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">จากวันที่</label>
+          <input type="date" id="startDate" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">ถึงวันที่</label>
+          <input type="date" id="endDate" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <button id="loadBtn" class="btn btn-primary w-100">
+            <i class="bi bi-bar-chart-line"></i> ดูรายงาน
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row text-center mb-4">
+    <div class="col-md-3 mb-3">
+      <div class="card bg-success text-white shadow-sm">
+        <div class="card-body">
+          <div class="fw-bold">รวมรายได้</div>
+          <div id="totalRevenue" class="fs-4">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-danger text-white shadow-sm">
+        <div class="card-body">
+          <div class="fw-bold">ยอดตีกลับ</div>
+          <div id="totalReturn" class="fs-4">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-warning text-dark shadow-sm">
+        <div class="card-body">
+          <div class="fw-bold">คืนเงิน</div>
+          <div id="totalRefund" class="fs-4">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-dark text-white shadow-sm">
+        <div class="card-body">
+          <div class="fw-bold">รวมออเดอร์</div>
+          <div id="totalOrders" class="fs-4">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h5><i class="bi bi-calendar-event"></i> สรุปรายเดือน</h5>
+      <div class="table-responsive mt-3">
+        <table class="table table-bordered table-striped" id="monthlyTable">
+          <thead class="table-light">
+            <tr>
+              <th>ร้านค้า</th>
+              <th>เดือน</th>
+              <th>ออเดอร์</th>
+              <th>ยอดตีกลับ</th>
+              <th>รายได้</th>
+              <th>คืนเงิน</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-5">
+    <div class="card-body">
+      <h5><i class="bi bi-calendar-day"></i> สรุปรายวัน</h5>
+      <div class="table-responsive mt-3">
+        <table class="table table-bordered table-striped" id="dailyTable">
+          <thead class="table-light">
+            <tr>
+              <th>วันที่</th>
+              <th>ร้านค้า</th>
+              <th>ออเดอร์</th>
+              <th>ยอดตีกลับ</th>
+              <th>รายได้</th>
+              <th>คืนเงิน</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const supabase = window.supabase.createClient('https://vzxttbvwukpsxqdaulvo.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U');
+
+  function formatCurrency(value) {
+    return '฿' + (+value).toLocaleString('en-US', { minimumFractionDigits: 0 });
+  }
+
+  function updateSummary(data) {
+    const total = { revenue: 0, return_count: 0, refund: 0, order_count: 0 };
+    data.forEach(row => {
+      total.revenue += +row.revenue || 0;
+      total.return_count += +row.return_count || 0;
+      total.refund += +row.refund || 0;
+      total.order_count += +row.order_count || 0;
+    });
+    document.getElementById('totalRevenue').textContent = formatCurrency(total.revenue);
+    document.getElementById('totalReturn').textContent = total.return_count.toLocaleString();
+    document.getElementById('totalRefund').textContent = formatCurrency(total.refund);
+    document.getElementById('totalOrders').textContent = total.order_count.toLocaleString();
+  }
+
+  function groupBy(arr, keyFn) {
+    return arr.reduce((acc, item) => {
+      const key = keyFn(item);
+      acc[key] = acc[key] || [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    const yearSelect = document.getElementById('yearSelect');
+    const monthSelect = document.getElementById('monthSelect');
+
+    const { data: allData, error } = await supabase.from('sku_history').select('date').order('date', { ascending: true });
+    if (error) return alert('ไม่สามารถโหลดข้อมูลเพื่อดึงปีได้: ' + error.message);
+
+    const years = [...new Set(allData.map(row => dayjs(row.date).year()))].sort((a, b) => b - a);
+    for (const y of years) yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
+
+    const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    for (let m = 1; m <= 12; m++) monthSelect.innerHTML += `<option value="${m}">${thaiMonths[m - 1]}</option>`;
+
+    document.getElementById('loadBtn').addEventListener('click', async () => {
+      const selectedYear = +yearSelect.value;
+      const selectedMonths = Array.from(monthSelect.selectedOptions).map(opt => +opt.value);
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+
+      let query = supabase.from('sku_history').select('*');
+      if (startDate) query = query.gte('date', startDate);
+      if (endDate) query = query.lte('date', endDate);
+
+      const { data, error } = await query;
+      if (error) return alert('โหลดข้อมูลผิดพลาด: ' + error.message);
+
+      let filtered = data;
+      if (selectedYear) filtered = filtered.filter(row => dayjs(row.date).year() === selectedYear);
+
+      if (selectedMonths.length > 0) {
+        const validDates = new Set();
+        selectedMonths.forEach(month => {
+          const monthStart = dayjs(`${selectedYear}-${String(month).padStart(2, '0')}-26`).subtract(1, 'month');
+          const monthEnd = dayjs(`${selectedYear}-${String(month).padStart(2, '0')}-25`);
+          let curr = monthStart;
+          while (curr.isBefore(monthEnd) || curr.isSame(monthEnd)) {
+            validDates.add(curr.format('YYYY-MM-DD'));
+            curr = curr.add(1, 'day');
+          }
+        });
+        filtered = filtered.filter(row => validDates.has(dayjs(row.date).format('YYYY-MM-DD')));
+      }
+
+      updateSummary(filtered);
+
+      const monthlyTable = document.querySelector('#monthlyTable tbody');
+      monthlyTable.innerHTML = '';
+      const monthlyGroup = groupBy(filtered, r => `${r.shop_name}_${dayjs(r.date).format('YYYY-MM')}`);
+      for (const key in monthlyGroup) {
+        const [shop, monthStr] = key.split('_');
+        const rows = monthlyGroup[key];
+        const sum = rows.reduce((acc, r) => {
+          acc.order += +r.order_count || 0;
+          acc.return += +r.return_count || 0;
+          acc.revenue += +r.revenue || 0;
+          acc.refund += +r.refund || 0;
+          return acc;
+        }, { order: 0, return: 0, revenue: 0, refund: 0 });
+
+        const monthNum = parseInt(monthStr.split('-')[1], 10);
+        const thaiMonth = thaiMonths[monthNum - 1];
+        monthlyTable.innerHTML += `
+          <tr>
+            <td>${shop}</td>
+            <td>${thaiMonth} ${monthStr.split('-')[0]}</td>
+            <td>${sum.order.toLocaleString()}</td>
+            <td>${sum.return.toLocaleString()}</td>
+            <td>${formatCurrency(sum.revenue)}</td>
+            <td>${formatCurrency(sum.refund)}</td>
+          </tr>`;
+      }
+
+      const dailyTable = document.querySelector('#dailyTable tbody');
+      dailyTable.innerHTML = '';
+      const dailyGroup = groupBy(filtered, r => `${r.date}_${r.shop_name}`);
+      for (const key in dailyGroup) {
+        const [date, shop] = key.split('_');
+        const rows = dailyGroup[key];
+        const sum = rows.reduce((acc, r) => {
+          acc.order += +r.order_count || 0;
+          acc.return += +r.return_count || 0;
+          acc.revenue += +r.revenue || 0;
+          acc.refund += +r.refund || 0;
+          return acc;
+        }, { order: 0, return: 0, revenue: 0, refund: 0 });
+        dailyTable.innerHTML += `
+          <tr>
+            <td>${date}</td>
+            <td>${shop}</td>
+            <td>${sum.order.toLocaleString()}</td>
+            <td>${sum.return.toLocaleString()}</td>
+            <td>${formatCurrency(sum.revenue)}</td>
+            <td>${formatCurrency(sum.refund)}</td>
+          </tr>`;
+      }
+    });
+  });
+</script>
+</body>
+</html>
