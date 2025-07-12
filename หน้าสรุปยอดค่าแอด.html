@@ -23,7 +23,6 @@
 
     <h2 class="text-center text-primary mb-4">📊 รายงานสรุปค่าแอด</h2>
 
-    <!-- ฟิลเตอร์ -->
     <div class="card p-4 mb-4">
       <div class="row g-3">
         <div class="col-md-3">
@@ -49,7 +48,6 @@
       </div>
     </div>
 
-    <!-- รายเดือน -->
     <div class="card p-4 mb-4">
       <h5 class="text-secondary mb-3"><i class="bi bi-calendar-month me-2"></i> รายละเอียดค่าแอดรายเดือน</h5>
       <div class="table-responsive">
@@ -65,7 +63,6 @@
       </div>
     </div>
 
-    <!-- รายวัน -->
     <div class="card p-4 mb-4">
       <h5 class="text-secondary mb-3"><i class="bi bi-calendar2-week me-2"></i> สรุปรายวันของเดือนที่เลือก</h5>
       <div class="table-responsive">
@@ -83,243 +80,132 @@
   </div>
 
 <script>
-  const supabaseUrl = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+const supabase = supabase.createClient(
+  'https://vzxttbvwukpsxqdaulvo.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U'
+);
 
-  function formatCurrency(n) {
-    return '฿' + n.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-  }
-  function formatNumber(n) {
-    return n.toLocaleString("en-US");
-  }
-  function clearDayFilter() {
-    document.getElementById("startDate").value = "";
-    document.getElementById("endDate").value = "";
-    // เคลียร์ checkbox เดือนทั้งหมด
-    document.querySelectorAll("#monthCheckboxes input[type=checkbox]").forEach(cb => cb.checked = false);
-    renderReport();
-  }
+function formatCurrency(n) {
+  return '฿' + (+n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+function formatNumber(n) {
+  return (+n).toLocaleString("en-US");
+}
+function clearDayFilter() {
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  renderReport();
+}
 
-  async function fetchYearsFromSupabase() {
-    const { data, error } = await supabase
-      .from('ad_history')
-      .select('date')
-      .order('date', { ascending: true });
+async function fetchAdHistory() {
+  let query = supabase.from('ad_history').select('*');
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+  if (startDate) query = query.gte('date', startDate);
+  if (endDate) query = query.lte('date', endDate);
+  const { data, error } = await query.order('date', { ascending: true });
+  return data || [];
+}
 
-    if (error) {
-      alert('เกิดข้อผิดพลาดในการโหลดข้อมูลปี');
-      console.error(error);
-      return [];
-    }
+function calcROAS(adcost, revenue) {
+  return revenue === 0 ? 0 : adcost ? revenue / adcost : 0;
+}
 
-    const yearSet = new Set();
-    data.forEach(item => {
-      const d = new Date(item.date);
-      yearSet.add(d.getFullYear());
-    });
+async function renderReport() {
+  const allData = await fetchAdHistory();
+  const year = parseInt(document.getElementById("selectedYear").value);
+  const selectedMonths = Array.from(document.querySelectorAll("#monthCheckboxes input:checked")).map(cb => parseInt(cb.value));
 
-    return Array.from(yearSet).sort((a, b) => b - a);
-  }
-
-  function renderMonthCheckboxes() {
-    // แสดง checkbox เดือนครบ 12 เดือนเสมอ
-    const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-    const container = document.getElementById('monthCheckboxes');
-    container.innerHTML = '';
-    for (let m = 1; m <= 12; m++) {
-      const div = document.createElement('div');
-      div.className = "form-check form-check-inline";
-      div.innerHTML = `
-        <input class="form-check-input" type="checkbox" id="month${m}" value="${m}">
-        <label class="form-check-label" for="month${m}">${monthNames[m - 1]}</label>
-      `;
-      container.appendChild(div);
+  let dateRanges = [];
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+  if (startDate && endDate) {
+    dateRanges.push({ start: new Date(startDate), end: new Date(endDate) });
+  } else {
+    for (const m of selectedMonths) {
+      let sm = m - 1, sy = year;
+      if (sm === 0) { sm = 12; sy--; }
+      dateRanges.push({
+        start: new Date(sy, sm - 1, 26),
+        end: new Date(year, m - 1, 25)
+      });
     }
   }
-
-  async function populateYearAndMonth() {
-    const years = await fetchYearsFromSupabase();
-
-    const selectYear = document.getElementById('selectedYear');
-    selectYear.innerHTML = '';
-    years.forEach(y => {
-      const opt = document.createElement('option');
-      opt.value = y;
-      opt.textContent = y;
-      selectYear.appendChild(opt);
-    });
-    if(years.length > 0) selectYear.value = years[0];
-
-    renderMonthCheckboxes();
-  }
-
-  async function fetchAdHistory() {
-    let query = supabase.from('ad_history').select('*');
-    const startDateInput = document.getElementById("startDate").value;
-    const endDateInput = document.getElementById("endDate").value;
-    if (startDateInput) query = query.gte('date', startDateInput);
-    if (endDateInput) query = query.lte('date', endDateInput);
-    const { data, error } = await query.order('date', { ascending: true });
-    if (error) {
-      alert('เกิดข้อผิดพลาดในการโหลดข้อมูลค่าแอด');
-      console.error(error);
-      return [];
-    }
-    return data || [];
-  }
-
-  function calcROAS(spend, revenue) {
-    return spend === 0 ? 0 : revenue / spend;
-  }
-
-  // ฟังก์ชันคำนวณช่วงวันที่ 26-25 ของเดือน (ตามกติกา)
-  function getCompanyMonthRange(year, month) {
-    let startYear = year;
-    let startMonth = month - 2;
-    if (startMonth < 0) {
-      startMonth += 12;
-      startYear--;
-    }
-    const startDate = new Date(startYear, startMonth, 26);
-    const endDate = new Date(year, month - 1, 25);
-    return { start: startDate.toISOString().slice(0, 10), end: endDate.toISOString().slice(0, 10) };
-  }
-
-  async function renderReport() {
-    const allData = await fetchAdHistory();
-
-    const selectedYear = parseInt(document.getElementById("selectedYear").value);
-    const selectedMonths = Array.from(document.querySelectorAll("#monthCheckboxes input[type=checkbox]:checked")).map(cb => parseInt(cb.value));
-    const startDateInput = document.getElementById("startDate").value;
-    const endDateInput = document.getElementById("endDate").value;
-
-    // สร้างช่วงวันที่ตามกติกา 26-25 สำหรับแต่ละเดือนที่เลือก
-    let dateRanges = [];
-    if (startDateInput && endDateInput) {
-      dateRanges.push({ start: new Date(startDateInput), end: new Date(endDateInput) });
-    } else if(selectedMonths.length > 0) {
-      for (const month of selectedMonths) {
-        const { start, end } = getCompanyMonthRange(selectedYear, month);
-        dateRanges.push({ start: new Date(start), end: new Date(end) });
-      }
-    } else {
-      // ถ้าไม่เลือกเดือนและไม่มีวันที่ ให้เลือกทั้งปี (1 ม.ค. ถึง 31 ธ.ค.)
-      dateRanges.push({ start: new Date(selectedYear, 0, 1), end: new Date(selectedYear, 11, 31) });
-    }
-
-    function isInRanges(dateStr) {
-      const d = new Date(dateStr);
-      return dateRanges.some(range => d >= range.start && d <= range.end);
-    }
-
-    // กรองข้อมูลตามช่วงวันที่
-    const filteredData = allData.filter(item => isInRanges(item.date));
-
-    // สรุปข้อมูลรายเดือน
-    let monthlyMap = {};
-    filteredData.forEach(item => {
-      const d = new Date(item.date);
-      const keyMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (!monthlyMap[keyMonth]) {
-        monthlyMap[keyMonth] = { spend_total: 0, cost: 0, purchases: 0, revenue: 0 };
-      }
-      monthlyMap[keyMonth].spend_total += Number(item.spend_total) || 0;
-      monthlyMap[keyMonth].cost += (Number(item.cost_per_purchase) * Number(item.purchases)) || 0;
-      monthlyMap[keyMonth].purchases += Number(item.purchases) || 0;
-      monthlyMap[keyMonth].revenue += Number(item.revenue) || 0;
-    });
-
-    const monthlyData = Object.entries(monthlyMap).map(([month, val]) => ({
-      month,
-      adcost: val.spend_total,
-      cost: val.cost,
-      qty: val.purchases,
-      revenue: val.revenue,
-      roas: calcROAS(val.spend_total, val.revenue),
-    }));
-
-    // สรุปรายวัน
-    let dailyMap = {};
-    filteredData.forEach(item => {
-      if (!dailyMap[item.date]) dailyMap[item.date] = { spend_total: 0, cost: 0, purchases: 0, revenue: 0 };
-      dailyMap[item.date].spend_total += Number(item.spend_total) || 0;
-      dailyMap[item.date].cost += (Number(item.cost_per_purchase) * Number(item.purchases)) || 0;
-      dailyMap[item.date].purchases += Number(item.purchases) || 0;
-      dailyMap[item.date].revenue += Number(item.revenue) || 0;
-    });
-
-    const dailyData = Object.entries(dailyMap).map(([date, val]) => ({
-      date,
-      adcost: val.spend_total,
-      cost: val.cost,
-      qty: val.purchases,
-      revenue: val.revenue,
-      roas: calcROAS(val.spend_total, val.revenue),
-    })).sort((a,b) => new Date(a.date) - new Date(b.date));
-
-    // เคลียร์ตารางก่อนแสดงผล
-    const monthlyBody = document.getElementById("monthlyCompareBody");
-    const dailyBody = document.getElementById("dailySummaryBody");
-    monthlyBody.innerHTML = "";
-    dailyBody.innerHTML = "";
-
-    // แสดงข้อมูลรายเดือน
-    let sumMonthlyAdCost=0, sumMonthlyCost=0, sumMonthlyQty=0, sumMonthlyRev=0;
-    monthlyData.forEach(item => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${item.month}</td>
-        <td>${formatCurrency(item.adcost)}</td>
-        <td>${formatCurrency(item.cost)}</td>
-        <td>${formatNumber(item.qty)}</td>
-        <td>${formatCurrency(item.revenue)}</td>
-        <td>${item.roas.toFixed(2)}</td>
-      `;
-      monthlyBody.appendChild(row);
-      sumMonthlyAdCost += item.adcost;
-      sumMonthlyCost += item.cost;
-      sumMonthlyQty += item.qty;
-      sumMonthlyRev += item.revenue;
-    });
-    const sumMonthlyROAS = calcROAS(sumMonthlyAdCost, sumMonthlyRev);
-    document.getElementById("sumMonthlyAdCost").innerText = formatCurrency(sumMonthlyAdCost);
-    document.getElementById("sumMonthlyCost").innerText = formatCurrency(sumMonthlyCost);
-    document.getElementById("sumMonthlyQty").innerText = formatNumber(sumMonthlyQty);
-    document.getElementById("sumMonthlyRev").innerText = formatCurrency(sumMonthlyRev);
-    document.getElementById("sumMonthlyROAS").innerText = sumMonthlyROAS.toFixed(2);
-
-    // แสดงข้อมูลรายวัน
-    let sumDailyAdCost=0, sumDailyCost=0, sumDailyQty=0, sumDailyRev=0;
-    dailyData.forEach(item => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${item.date}</td>
-        <td>${formatCurrency(item.adcost)}</td>
-        <td>${formatCurrency(item.cost)}</td>
-        <td>${formatNumber(item.qty)}</td>
-        <td>${formatCurrency(item.revenue)}</td>
-        <td>${item.roas.toFixed(2)}</td>
-      `;
-      dailyBody.appendChild(row);
-      sumDailyAdCost += item.adcost;
-      sumDailyCost += item.cost;
-      sumDailyQty += item.qty;
-      sumDailyRev += item.revenue;
-    });
-    const sumDailyROAS = calcROAS(sumDailyAdCost, sumDailyRev);
-    document.getElementById("sumDailyAdCost").innerText = formatCurrency(sumDailyAdCost);
-    document.getElementById("sumDailyCost").innerText = formatCurrency(sumDailyCost);
-    document.getElementById("sumDailyQty").innerText = formatNumber(sumDailyQty);
-    document.getElementById("sumDailyRev").innerText = formatCurrency(sumDailyRev);
-    document.getElementById("sumDailyROAS").innerText = sumDailyROAS.toFixed(2);
-  }
-
-  document.addEventListener("DOMContentLoaded", async () => {
-    await populateYearAndMonth();
-    renderReport();
+  const isInRange = dateStr => dateRanges.some(r => {
+    const d = new Date(dateStr);
+    return d >= r.start && d <= r.end;
   });
+  const data = allData.filter(d => isInRange(d.date));
 
+  // รายเดือน
+  const monthlyMap = {};
+  for (const d of data) {
+    const dt = new Date(d.date);
+    const key = dt.getFullYear() + "-" + ("0" + (dt.getMonth() + 1)).slice(-2);
+    if (!monthlyMap[key]) monthlyMap[key] = { adcost: 0, cost: 0, qty: 0, revenue: 0 };
+    monthlyMap[key].adcost += +d.spend_total || 0;
+    monthlyMap[key].cost += (+d.cost_per_purchase * +d.purchases) || 0;
+    monthlyMap[key].qty += +d.purchases || 0;
+    monthlyMap[key].revenue += +d.revenue || 0;
+  }
+  const monthlyCompareBody = document.getElementById("monthlyCompareBody");
+  monthlyCompareBody.innerHTML = "";
+  let sumAd = 0, sumCost = 0, sumQty = 0, sumRev = 0;
+  Object.entries(monthlyMap).forEach(([m, v]) => {
+    sumAd += v.adcost; sumCost += v.cost; sumQty += v.qty; sumRev += v.revenue;
+    monthlyCompareBody.innerHTML += `<tr><td>${m}</td><td>${formatCurrency(v.adcost)}</td><td>${formatCurrency(v.cost)}</td><td>${formatNumber(v.qty)}</td><td>${formatCurrency(v.revenue)}</td><td>${calcROAS(v.adcost, v.revenue).toFixed(2)}</td></tr>`;
+  });
+  document.getElementById("sumMonthlyAdCost").innerText = formatCurrency(sumAd);
+  document.getElementById("sumMonthlyCost").innerText = formatCurrency(sumCost);
+  document.getElementById("sumMonthlyQty").innerText = formatNumber(sumQty);
+  document.getElementById("sumMonthlyRev").innerText = formatCurrency(sumRev);
+  document.getElementById("sumMonthlyROAS").innerText = calcROAS(sumAd, sumRev).toFixed(2);
+
+  // รายวัน
+  const dailyMap = {};
+  for (const d of data) {
+    const date = d.date;
+    if (!dailyMap[date]) dailyMap[date] = { adcost: 0, cost: 0, qty: 0, revenue: 0 };
+    dailyMap[date].adcost += +d.spend_total || 0;
+    dailyMap[date].cost += (+d.cost_per_purchase * +d.purchases) || 0;
+    dailyMap[date].qty += +d.purchases || 0;
+    dailyMap[date].revenue += +d.revenue || 0;
+  }
+  const dailySummaryBody = document.getElementById("dailySummaryBody");
+  dailySummaryBody.innerHTML = "";
+  let sumDA = 0, sumDC = 0, sumDQ = 0, sumDR = 0;
+  Object.entries(dailyMap).sort().forEach(([date, v]) => {
+    sumDA += v.adcost; sumDC += v.cost; sumDQ += v.qty; sumDR += v.revenue;
+    dailySummaryBody.innerHTML += `<tr><td>${date}</td><td>${formatCurrency(v.adcost)}</td><td>${formatCurrency(v.cost)}</td><td>${formatNumber(v.qty)}</td><td>${formatCurrency(v.revenue)}</td><td>${calcROAS(v.adcost, v.revenue).toFixed(2)}</td></tr>`;
+  });
+  document.getElementById("sumDailyAdCost").innerText = formatCurrency(sumDA);
+  document.getElementById("sumDailyCost").innerText = formatCurrency(sumDC);
+  document.getElementById("sumDailyQty").innerText = formatNumber(sumDQ);
+  document.getElementById("sumDailyRev").innerText = formatCurrency(sumDR);
+  document.getElementById("sumDailyROAS").innerText = calcROAS(sumDA, sumDR).toFixed(2);
+}
+
+const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+document.addEventListener("DOMContentLoaded", async () => {
+  const { data } = await supabase.from('ad_history').select('date').order('date');
+  const years = [...new Set((data || []).map(r => new Date(r.date).getFullYear()))];
+  const yearSel = document.getElementById("selectedYear");
+  years.sort().reverse().forEach(y => {
+    const o = document.createElement("option"); o.value = y; o.textContent = y; yearSel.appendChild(o);
+  });
+  if (years.length) yearSel.value = years[0];
+
+  const container = document.getElementById("monthCheckboxes");
+  container.innerHTML = "";
+  for (let i = 0; i < 12; i++) {
+    const m = i + 1;
+    container.innerHTML += `<div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="month${m}" value="${m}" checked>
+      <label class="form-check-label" for="month${m}">${monthNames[i]}</label></div>`;
+  }
+
+  renderReport();
+});
 </script>
 </body>
 </html>
