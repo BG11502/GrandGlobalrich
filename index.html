@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+  
 <head>
   <meta charset="UTF-8" />
   <title>สรุปยอดรวมตาม Seller SKU</title>
@@ -40,15 +41,26 @@
       <div class="col-md-3"><div class="card p-3"><h6>ยอดคืนเงิน</h6><h4 id="totalRefundCard">0.00</h4></div></div>
       <div class="col-md-3"><div class="card p-3"><h6>จำนวนยอดตีกลับ</h6><h4 id="totalReturnCard">0</h4></div></div>
     </div>
+    
 
     <!-- Upload & Table -->
     <div class="card p-4 mb-4">
       <h2 class="mb-4 text-primary">📦 สรุปยอดรวมตาม Seller SKU</h2>
       <input type="file" id="excelFile" accept=".xlsx" class="form-control mb-3">
       <div class="row g-2 mb-3">
-        <div class="col-md-6"><input type="date" id="recordStartDate" class="form-control"></div>
-        <div class="col-md-6"><input type="date" id="recordEndDate" class="form-control"></div>
-      </div>
+  <div class="col-md-6"><input type="date" id="recordStartDate" class="form-control"></div>
+  <div class="col-md-6"><input type="date" id="recordEndDate" class="form-control"></div>
+</div>
+<div class="row g-2 mb-4">
+  <div class="col-md-8">
+    <select class="form-select" id="shopSelect"></select>
+  </div>
+  <div class="col-md-4 d-grid">
+    <button class="btn btn-outline-secondary" onclick="addNewShop()"><i class="bi bi-plus-circle"></i> เพิ่มร้านใหม่</button>
+  </div>
+</div>
+
+      
       <button class="btn btn-primary mb-4" onclick="saveToHistoryMultipleDates()">
         <i class="bi bi-save"></i> บันทึกข้อมูลในช่วงวันที่
       </button>
@@ -56,7 +68,7 @@
       <div class="table-responsive">
         <table class="table table-bordered table-hover text-center align-middle">
           <thead class="table-primary">
-            <tr><th>Seller SKU</th><th>Quantity</th><th>Return</th><th>Order Amount</th><th>Refund</th></tr>
+            <tr><th>Seller SKU</th><th>Quantity</th><th>Return</th><th>Order Amount</th><th>Refund</th><th>ชื่อร้าน</th></tr>
           </thead>
           <tbody id="summaryBody"></tbody>
           <tfoot class="table-dark fw-bold">
@@ -86,7 +98,15 @@
       </div>
       <div class="table-responsive">
         <table class="table table-bordered table-hover text-center">
-          <thead class="table-danger"><tr><th>วันที่</th><th>จัดการ</th></tr></thead>
+          <thead class="table-danger">
+  <tr>
+    <th>วันที่</th>
+    <th>ชื่อร้าน</th>
+    
+    <th>จัดการ</th>
+  </tr>
+</thead>
+
           <tbody id="historyList"><tr><td colspan="2" class="text-muted">ไม่มีข้อมูล</td></tr></tbody>
         </table>
       </div>
@@ -158,7 +178,9 @@ async function saveToHistoryMultipleDates() {
   if (!window.summaryData || !window.excelData) return alert("กรุณาอัปโหลดข้อมูลก่อน");
   const start = document.getElementById("recordStartDate").value;
   const end = document.getElementById("recordEndDate").value;
+  const shop = document.getElementById("shopSelect").value;
   if (!start || !end) return alert("เลือกช่วงวันที่ก่อนบันทึก");
+  if (!shop) return alert("กรุณาเลือกร้านก่อนบันทึก");
 
   const cur = new Date(start), last = new Date(end);
   const skuList = Object.entries(window.summaryData.summary).map(([sku, obj]) => ({ name: sku, ...obj }));
@@ -172,7 +194,8 @@ async function saveToHistoryMultipleDates() {
       total_amount: window.summaryData.tA,
       total_refund: window.summaryData.tF,
       sku_count: window.summaryData.skuCount,
-      skus: skuList
+      skus: skuList,
+      shop_name: shop
     });
     cur.setDate(cur.getDate() + 1);
   }
@@ -187,8 +210,9 @@ async function saveToHistoryMultipleDates() {
   }
 }
 
+
 async function fetchHistoryFromSupabase() {
-  const { data, error } = await _supabase.from("sku_history").select("id, date").order("date", { ascending: true });
+  const { data, error } = await _supabase.from("sku_history").select("id, date, shop_name").order("date", { ascending: true });
   if (error) {
     console.error("Fetch error:", error);
     return;
@@ -200,39 +224,39 @@ function renderHistoryList(data = []) {
   const tbody = document.getElementById("historyList");
   tbody.innerHTML = "";
   if (!data.length) {
-    tbody.innerHTML = `<tr><td colspan="2" class="text-muted">ไม่มีข้อมูลประวัติการบันทึก</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="text-muted">ไม่มีข้อมูลประวัติการบันทึก</td></tr>`;
     return;
   }
   data.forEach((entry, i) => {
     tbody.innerHTML += `
-      <tr>
-        <td><span id="date-${i}">${entry.date}</span><input type="date" class="form-control d-none" id="editDate-${i}" value="${entry.date}"></td>
-        <td>
-          <button class="btn btn-sm btn-outline-secondary me-1" onclick="toggleEditDate(${i})"><i class="bi bi-pencil-square"></i> แก้ไข</button>
-          <button class="btn btn-sm btn-outline-success me-1 d-none" id="saveBtn-${i}" onclick="saveEditedDate(${i}, '${entry.id}')"><i class="bi bi-check-circle"></i> บันทึก</button>
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteHistory('${entry.id}', '${entry.date}')"><i class="bi bi-trash"></i> ลบ</button>
-        </td>
-      </tr>`;
+  <tr>
+    <td>
+      <span id="date-${i}">${entry.date}</span>
+      <input type="date" class="form-control d-none" id="editDate-${i}" value="${entry.date}">
+    </td>
+    <td>
+  <span id="shop-${i}">${entry.shop_name || "-"}</span>
+  <input type="text" class="form-control d-none" id="editShop-${i}" value="${entry.shop_name || ''}">
+</td>
+
+    <td>
+      <button class="btn btn-sm btn-outline-secondary me-1" onclick="toggleEditRow(${i})"><i class="bi bi-pencil-square"></i></button>
+      <button class="btn btn-sm btn-outline-success me-1 d-none" id="saveBtn-${i}" onclick="saveEditedDate(${i}, '${entry.id}')"><i class="bi bi-check-circle"></i></button>
+      <button class="btn btn-sm btn-outline-danger" onclick="deleteHistory('${entry.id}', '${entry.date}')"><i class="bi bi-trash"></i></button>
+    </td>
+  </tr>`;
+
   });
   window._historyData = data;
 }
 
-function toggleEditDate(index) {
+
+async function toggleEditRow(index) {
   document.getElementById(`date-${index}`).classList.add("d-none");
   document.getElementById(`editDate-${index}`).classList.remove("d-none");
+  document.getElementById(`shop-${index}`).classList.add("d-none");
+  document.getElementById(`editShop-${index}`).classList.remove("d-none");
   document.getElementById(`saveBtn-${index}`).classList.remove("d-none");
-}
-
-async function saveEditedDate(index, id) {
-  const newDate = document.getElementById(`editDate-${index}`).value;
-  if (!newDate) return alert("กรุณาเลือกวันที่ใหม่");
-  const { error } = await _supabase.from("sku_history").update({ date: newDate }).eq("id", id);
-  if (error) {
-    alert("❌ แก้ไขไม่สำเร็จ");
-  } else {
-    alert("✅ แก้ไขสำเร็จ");
-    fetchHistoryFromSupabase();
-  }
 }
 
 async function deleteHistory(id, date) {
@@ -251,9 +275,66 @@ function applyHistoryFilter() {
   const end = document.getElementById("filterEndDate").value;
   const filtered = (window._historyData || []).filter(e => (!start || e.date >= start) && (!end || e.date <= end));
   renderHistoryList(filtered);
+  
 }
 
-document.addEventListener("DOMContentLoaded", fetchHistoryFromSupabase);
+document.addEventListener("DOMContentLoaded", () => {
+  loadShops();
+  fetchHistoryFromSupabase();
+});
+
 </script>
+<script>
+let shopList = [];
+
+async function loadShops() {
+  const { data, error } = await _supabase.from("sku_history").select("shop_name").not("shop_name", "is", null);
+  if (error) return console.error("โหลดชื่อร้านผิดพลาด", error);
+  const uniqueShops = [...new Set(data.map(row => row.shop_name).filter(Boolean))];
+  shopList = uniqueShops;
+  const select = document.getElementById("shopSelect");
+  select.innerHTML = uniqueShops.map(shop => `<option value="${shop}">${shop}</option>`).join("");
+  if (uniqueShops.length) select.value = uniqueShops[0];
+}
+
+function addNewShop() {
+  const name = prompt("กรอกชื่อร้านใหม่:");
+  if (!name) return;
+
+  if (shopList.includes(name)) {
+    alert("ร้านนี้มีอยู่แล้วในระบบ");
+    return;
+  }
+
+  shopList.push(name);
+  const select = document.getElementById("shopSelect");
+  const option = document.createElement("option");
+  option.value = name;
+  option.textContent = name;
+  select.appendChild(option);
+  select.value = name;
+}
+async function saveEditedDate(index, id) {
+  const newDate = document.getElementById(`editDate-${index}`).value;
+  const newShop = document.getElementById(`editShop-${index}`).value.trim();
+  if (!newDate) return alert("กรุณาเลือกวันที่ใหม่");
+  if (!newShop) return alert("กรุณากรอกชื่อร้าน");
+
+  const { error } = await _supabase
+    .from("sku_history")
+    .update({ date: newDate, shop_name: newShop })
+    .eq("id", id);
+
+  if (error) {
+    alert("❌ แก้ไขไม่สำเร็จ");
+  } else {
+    alert("✅ แก้ไขสำเร็จ");
+    fetchHistoryFromSupabase();
+  }
+}
+
+
+</script>
+
 </body>
 </html>
