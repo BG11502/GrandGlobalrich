@@ -85,8 +85,112 @@ const supabase = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U'
 );
 
-// ...ฟังก์ชัน renderReport() และฟังก์ชันอื่นให้ใช้ตามไฟล์ล่าสุดที่คุณเคยให้ (จะเรียกใช้ supabase ได้ถูกต้อง)
-  document.addEventListener("DOMContentLoaded", async () => {
+function formatCurrency(n) {
+  return '฿' + (n || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+function formatNumber(n) {
+  return (n || 0).toLocaleString("en-US");
+}
+function clearDayFilter() {
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  renderReport();
+}
+
+async function renderReport() {
+  const { data, error } = await supabase.from("ad_history").select("*").order("date", { ascending: true });
+  if (error || !data) return alert("โหลดข้อมูลไม่สำเร็จ");
+
+  const selectedYear = parseInt(document.getElementById("selectedYear").value);
+  const selectedMonths = Array.from(document.querySelectorAll("#monthCheckboxes input:checked")).map(cb => parseInt(cb.value));
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+
+  let dateRanges = [];
+  if (startDate && endDate) {
+    dateRanges.push({ start: new Date(startDate), end: new Date(endDate) });
+  } else {
+    for (const m of selectedMonths) {
+      let startY = selectedYear, startM = m - 1;
+      if (startM === 0) { startM = 12; startY--; }
+      const rangeStart = new Date(startY, startM - 1, 26);
+      const rangeEnd = new Date(selectedYear, m - 1, 25);
+      dateRanges.push({ start: rangeStart, end: rangeEnd });
+    }
+  }
+
+  const isInRanges = (dateStr) => {
+    const d = new Date(dateStr);
+    return dateRanges.length === 0 || dateRanges.some(r => d >= r.start && d <= r.end);
+  };
+
+  const filtered = data.filter(row => isInRanges(row.date));
+
+  const monthlyMap = {};
+  filtered.forEach(row => {
+    const d = new Date(row.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!monthlyMap[key]) monthlyMap[key] = { ad: 0, cost: 0, qty: 0, rev: 0 };
+    monthlyMap[key].ad += +row.spend_total || 0;
+    monthlyMap[key].cost += (+row.cost_per_purchase * +row.purchases) || 0;
+    monthlyMap[key].qty += +row.purchases || 0;
+    monthlyMap[key].rev += +row.revenue || 0;
+  });
+
+  const tbodyM = document.getElementById("monthlyCompareBody");
+  tbodyM.innerHTML = "";
+  let sumAd = 0, sumCost = 0, sumQty = 0, sumRev = 0;
+  Object.entries(monthlyMap).sort().forEach(([month, val]) => {
+    sumAd += val.ad; sumCost += val.cost; sumQty += val.qty; sumRev += val.rev;
+    tbodyM.innerHTML += `
+      <tr>
+        <td>${month}</td>
+        <td>${formatCurrency(val.ad)}</td>
+        <td>${formatCurrency(val.cost)}</td>
+        <td>${formatNumber(val.qty)}</td>
+        <td>${formatCurrency(val.rev)}</td>
+        <td>${(val.ad ? (val.rev / val.ad) : 0).toFixed(2)}</td>
+      </tr>`;
+  });
+  document.getElementById("sumMonthlyAdCost").textContent = formatCurrency(sumAd);
+  document.getElementById("sumMonthlyCost").textContent = formatCurrency(sumCost);
+  document.getElementById("sumMonthlyQty").textContent = formatNumber(sumQty);
+  document.getElementById("sumMonthlyRev").textContent = formatCurrency(sumRev);
+  document.getElementById("sumMonthlyROAS").textContent = (sumAd ? (sumRev / sumAd) : 0).toFixed(2);
+
+  const dailyMap = {};
+  filtered.forEach(row => {
+    const d = row.date;
+    if (!dailyMap[d]) dailyMap[d] = { ad: 0, cost: 0, qty: 0, rev: 0 };
+    dailyMap[d].ad += +row.spend_total || 0;
+    dailyMap[d].cost += (+row.cost_per_purchase * +row.purchases) || 0;
+    dailyMap[d].qty += +row.purchases || 0;
+    dailyMap[d].rev += +row.revenue || 0;
+  });
+
+  const tbodyD = document.getElementById("dailySummaryBody");
+  tbodyD.innerHTML = "";
+  let dAd = 0, dCost = 0, dQty = 0, dRev = 0;
+  Object.entries(dailyMap).sort().forEach(([day, val]) => {
+    dAd += val.ad; dCost += val.cost; dQty += val.qty; dRev += val.rev;
+    tbodyD.innerHTML += `
+      <tr>
+        <td>${day}</td>
+        <td>${formatCurrency(val.ad)}</td>
+        <td>${formatCurrency(val.cost)}</td>
+        <td>${formatNumber(val.qty)}</td>
+        <td>${formatCurrency(val.rev)}</td>
+        <td>${(val.ad ? (val.rev / val.ad) : 0).toFixed(2)}</td>
+      </tr>`;
+  });
+  document.getElementById("sumDailyAdCost").textContent = formatCurrency(dAd);
+  document.getElementById("sumDailyCost").textContent = formatCurrency(dCost);
+  document.getElementById("sumDailyQty").textContent = formatNumber(dQty);
+  document.getElementById("sumDailyRev").textContent = formatCurrency(dRev);
+  document.getElementById("sumDailyROAS").textContent = (dAd ? (dRev / dAd) : 0).toFixed(2);
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
   const { data, error } = await supabase
     .from("ad_history")
     .select("date")
@@ -121,8 +225,6 @@ const supabase = window.supabase.createClient(
 
   renderReport();
 });
-
 </script>
-  
 </body>
 </html>
