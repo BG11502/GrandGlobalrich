@@ -20,6 +20,8 @@
   </style>
 </head>
 <body>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <div class="d-flex">
   <!-- Sidebar -->
   <div class="sidebar p-4">
@@ -68,7 +70,7 @@
       <div class="table-responsive">
         <table class="table table-bordered table-hover text-center align-middle">
           <thead class="table-primary">
-            <tr><th>Seller SKU</th><th>Quantity</th><th>Return</th><th>Order Amount</th><th>Refund</th><th>ชื่อร้าน</th></tr>
+            <tr><th>Seller SKU</th><th>Quantity</th><th>Return</th><th>Order Amount</th><th>Refund</th></tr>
           </thead>
           <tbody id="summaryBody"></tbody>
           <tfoot class="table-dark fw-bold">
@@ -86,33 +88,39 @@
 
     <!-- History -->
     <div class="card p-4 mb-4">
-      <h5 class="mb-3 text-danger">🕘 ประวัติการบันทึกข้อมูล</h5>
-      <div class="row g-2 mb-3">
-        <div class="col-md-5"><input type="date" class="form-control" id="filterStartDate"></div>
-        <div class="col-md-5"><input type="date" class="form-control" id="filterEndDate"></div>
-        <div class="col-md-2 d-grid">
-          <button class="btn btn-outline-primary" onclick="applyHistoryFilter()">
-            <i class="bi bi-search"></i> ค้นหา
-          </button>
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-bordered table-hover text-center">
-          <thead class="table-danger">
-  <tr>
-    <th>วันที่</th>
-    <th>ชื่อร้าน</th>
-    
-    <th>จัดการ</th>
-  </tr>
-</thead>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="text-danger mb-0">🕘 ประวัติการบันทึกข้อมูล</h5>
+    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#historyCollapse">
+      แสดง/ซ่อน
+    </button>
+  </div>
 
-          <tbody id="historyList"><tr><td colspan="2" class="text-muted">ไม่มีข้อมูล</td></tr></tbody>
-        </table>
+  <div class="collapse" id="historyCollapse">
+    <div class="row g-2 mb-3">
+      <div class="col-md-5"><input type="date" class="form-control" id="filterStartDate"></div>
+      <div class="col-md-5"><input type="date" class="form-control" id="filterEndDate"></div>
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-outline-primary" onclick="applyHistoryFilter()">
+          <i class="bi bi-search"></i> ค้นหา
+        </button>
       </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover text-center">
+        <thead class="table-danger">
+          <tr>
+            <th>วันที่</th>
+            <th>ชื่อร้าน</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="historyList"><tr><td colspan="3" class="text-muted">ไม่มีข้อมูล</td></tr></tbody>
+      </table>
     </div>
   </div>
 </div>
+
 
 <!-- ✅ SCRIPT -->
 <script>
