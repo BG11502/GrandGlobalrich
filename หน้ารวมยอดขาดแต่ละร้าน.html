@@ -1,256 +1,278 @@
-<!-- ใช้แทนทั้งไฟล์ .html เดิมของคุณได้เลย -->
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
+    <div class="d-flex justify-content-end gap-2 mt-3">
+  <button class="btn btn-outline-secondary" onclick="history.back()">⬅️ ย้อนกลับ</button>
+  <a href="index.html" class="btn btn-primary">🏠 หน้าหลัก</a>
+</div>
+
+  <meta charset="UTF-8" />
   <title>รายงานยอดขายแต่ละร้าน</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
-    body { background-color: #f8f9fa; }
-    .card-header-icon { font-size: 1.25rem; margin-right: 0.5rem; }
+    body {
+      background-color: #f8f9fa;
+    }
+    .summary-card {
+      min-width: 200px;
+    }
+    .table-summary th, .table-summary td {
+      text-align: right;
+    }
+    .table-summary th:first-child, .table-summary td:first-child {
+      text-align: center;
+    }
+    .filter-box {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.03);
+    }
+    .month-checkboxes label {
+      margin-right: 12px;
+    }
   </style>
 </head>
 <body class="p-4">
-<div class="container">
-  <div class="card shadow-sm mb-4">
-    <div class="card-body">
-      <h3 class="mb-4"><i class="bi bi-shop-window"></i> รายงานยอดขายแต่ละร้าน</h3>
-      <div class="row g-3 align-items-end">
+  <div class="container">
+    <h3 class="mb-4 fw-bold text-primary">รายงานยอดขายแต่ละร้าน</h3>
+
+    <div class="filter-box mb-4">
+      <div class="row g-3">
         <div class="col-md-2">
-          <label class="form-label">ปี</label>
+          <label class="form-label fw-bold">เลือกปี</label>
           <select id="yearSelect" class="form-select"></select>
         </div>
-        <div class="col-md-3">
-          <label class="form-label">เดือน (เลือกได้หลายเดือน)</label>
-          <select id="monthSelect" class="form-select" multiple></select>
+
+        <div class="col-md-6">
+          <label class="form-label fw-bold">เลือกเดือน (ตามระบบ)</label>
+          <div class="d-flex flex-wrap gap-2" id="monthCheckboxes"></div>
         </div>
-        <div class="col-md-2">
-          <label class="form-label">จากวันที่</label>
-          <input type="date" id="startDate" class="form-control">
+
+        <div class="col-md-4">
+          <label class="form-label fw-bold">เลือกช่วงวันที่</label>
+          <div class="d-flex">
+            <input type="date" id="startDate" class="form-control me-2">
+            <input type="date" id="endDate" class="form-control">
+          </div>
         </div>
-        <div class="col-md-2">
-          <label class="form-label">ถึงวันที่</label>
-          <input type="date" id="endDate" class="form-control">
+
+        <div class="col-md-4">
+          <label class="form-label fw-bold">เลือกร้าน</label>
+          <select id="shopFilter" class="form-select">
+            <option value="">ทั้งหมด</option>
+          </select>
         </div>
-        <div class="col-md-2">
-          <button id="loadBtn" class="btn btn-primary w-100">
-            <i class="bi bi-bar-chart-line"></i> ดูรายงาน
-          </button>
+
+        <div class="col-md-8 d-flex align-items-end justify-content-start gap-2">
+          <button class="btn btn-success" onclick="loadData()">✅ ยืนยันการกรอง</button>
+          <button class="btn btn-outline-danger" onclick="resetFilter()">❌ ล้างการกรอง</button>
         </div>
       </div>
     </div>
+
+    <div class="row mb-4" id="summaryCards"></div>
+    <div id="shopTableContainer"></div>
+    <div id="monthlySummaryContainer" class="mt-5"></div>
   </div>
 
-  <div class="row text-center mb-4">
-    <div class="col-md-3 mb-3">
-      <div class="card bg-success text-white shadow-sm">
-        <div class="card-body">
-          <div class="fw-bold">รวมรายได้</div>
-          <div id="totalRevenue" class="fs-4">-</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card bg-danger text-white shadow-sm">
-        <div class="card-body">
-          <div class="fw-bold">ยอดตีกลับ</div>
-          <div id="totalReturn" class="fs-4">-</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card bg-warning text-dark shadow-sm">
-        <div class="card-body">
-          <div class="fw-bold">คืนเงิน</div>
-          <div id="totalRefund" class="fs-4">-</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card bg-dark text-white shadow-sm">
-        <div class="card-body">
-          <div class="fw-bold">รวมออเดอร์</div>
-          <div id="totalOrders" class="fs-4">-</div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <script>
+    const client = supabase.createClient(
+      "https://vzxttbvwukpsxqdaulvo.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U"
+    );
 
-  <div class="card shadow-sm mb-4">
-    <div class="card-body">
-      <h5><i class="bi bi-calendar-event"></i> สรุปรายเดือน</h5>
-      <div class="table-responsive mt-3">
-        <table class="table table-bordered table-striped" id="monthlyTable">
-          <thead class="table-light">
-            <tr>
-              <th>ร้านค้า</th>
-              <th>เดือน</th>
-              <th>ออเดอร์</th>
-              <th>ยอดตีกลับ</th>
-              <th>รายได้</th>
-              <th>คืนเงิน</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+    const yearSelect = document.getElementById("yearSelect");
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+    const monthCheckboxes = document.getElementById("monthCheckboxes");
+    const shopFilter = document.getElementById("shopFilter");
 
-  <div class="card shadow-sm mb-5">
-    <div class="card-body">
-      <h5><i class="bi bi-calendar-day"></i> สรุปรายวัน</h5>
-      <div class="table-responsive mt-3">
-        <table class="table table-bordered table-striped" id="dailyTable">
-          <thead class="table-light">
-            <tr>
-              <th>วันที่</th>
-              <th>ร้านค้า</th>
-              <th>ออเดอร์</th>
-              <th>ยอดตีกลับ</th>
-              <th>รายได้</th>
-              <th>คืนเงิน</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
+    const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
-<script>
-  const supabase = window.supabase.createClient('https://vzxttbvwukpsxqdaulvo.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U');
+    for (let y = 2022; y <= new Date().getFullYear(); y++) {
+      yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
+    }
 
-  function formatCurrency(value) {
-    return '฿' + (+value).toLocaleString('en-US', { minimumFractionDigits: 0 });
-  }
+    monthCheckboxes.innerHTML = monthNames.map((m, i) => `
+      <div class='form-check me-2'>
+        <input class='form-check-input month-check' type='checkbox' value='${i + 1}' id='m${i}'>
+        <label class='form-check-label' for='m${i}'>${m}</label>
+      </div>`).join("");
 
-  function updateSummary(data) {
-    const total = { revenue: 0, return_count: 0, refund: 0, order_count: 0 };
-    data.forEach(row => {
-      total.revenue += +row.revenue || 0;
-      total.return_count += +row.return_count || 0;
-      total.refund += +row.refund || 0;
-      total.order_count += +row.order_count || 0;
-    });
-    document.getElementById('totalRevenue').textContent = formatCurrency(total.revenue);
-    document.getElementById('totalReturn').textContent = total.return_count.toLocaleString();
-    document.getElementById('totalRefund').textContent = formatCurrency(total.refund);
-    document.getElementById('totalOrders').textContent = total.order_count.toLocaleString();
-  }
+    function getSelectedMonths() {
+      return Array.from(document.querySelectorAll(".month-check:checked")).map(el => parseInt(el.value));
+    }
 
-  function groupBy(arr, keyFn) {
-    return arr.reduce((acc, item) => {
-      const key = keyFn(item);
-      acc[key] = acc[key] || [];
-      acc[key].push(item);
-      return acc;
-    }, {});
-  }
+    function resetFilter() {
+      document.querySelectorAll(".month-check").forEach(el => el.checked = false);
+      startDateInput.value = "";
+      endDateInput.value = "";
+      shopFilter.value = "";
+      loadData();
+    }
 
-  document.addEventListener('DOMContentLoaded', async () => {
-    const yearSelect = document.getElementById('yearSelect');
-    const monthSelect = document.getElementById('monthSelect');
+    function formatNumber(num) {
+      return num?.toLocaleString("th-TH", { minimumFractionDigits: 2 });
+    }
 
-    const { data: allData, error } = await supabase.from('sku_history').select('date').order('date', { ascending: true });
-    if (error) return alert('ไม่สามารถโหลดข้อมูลเพื่อดึงปีได้: ' + error.message);
+    async function loadData() {
+      const selectedYear = parseInt(yearSelect.value);
+      const selectedMonths = getSelectedMonths();
+      const selectedShop = shopFilter.value;
 
-    const years = [...new Set(allData.map(row => dayjs(row.date).year()))].sort((a, b) => b - a);
-    for (const y of years) yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
-
-    const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-    for (let m = 1; m <= 12; m++) monthSelect.innerHTML += `<option value="${m}">${thaiMonths[m - 1]}</option>`;
-
-    document.getElementById('loadBtn').addEventListener('click', async () => {
-      const selectedYear = +yearSelect.value;
-      const selectedMonths = Array.from(monthSelect.selectedOptions).map(opt => +opt.value);
-      const startDate = document.getElementById('startDate').value;
-      const endDate = document.getElementById('endDate').value;
-
-      let query = supabase.from('sku_history').select('*');
-      if (startDate) query = query.gte('date', startDate);
-      if (endDate) query = query.lte('date', endDate);
-
-      const { data, error } = await query;
-      if (error) return alert('โหลดข้อมูลผิดพลาด: ' + error.message);
-
-      let filtered = data;
-      if (selectedYear) filtered = filtered.filter(row => dayjs(row.date).year() === selectedYear);
+      let startDate, endDate;
 
       if (selectedMonths.length > 0) {
-        const validDates = new Set();
-        selectedMonths.forEach(month => {
-          const monthStart = dayjs(`${selectedYear}-${String(month).padStart(2, '0')}-26`).subtract(1, 'month');
-          const monthEnd = dayjs(`${selectedYear}-${String(month).padStart(2, '0')}-25`);
-          let curr = monthStart;
-          while (curr.isBefore(monthEnd) || curr.isSame(monthEnd)) {
-            validDates.add(curr.format('YYYY-MM-DD'));
-            curr = curr.add(1, 'day');
-          }
+        const minMonth = Math.min(...selectedMonths);
+        const maxMonth = Math.max(...selectedMonths);
+        startDate = new Date(selectedYear, minMonth - 2, 26);
+        endDate = new Date(selectedYear, maxMonth - 1, 25);
+      } else if (startDateInput.value && endDateInput.value) {
+        startDate = new Date(startDateInput.value);
+        endDate = new Date(endDateInput.value);
+      } else {
+        startDate = new Date(selectedYear, 0, 1);
+        endDate = new Date(selectedYear, 11, 31);
+      }
+
+      let query = client
+        .from("sku_history")
+        .select("*")
+        .gte("date", dayjs(startDate).format("YYYY-MM-DD"))
+        .lte("date", dayjs(endDate).format("YYYY-MM-DD"));
+
+      if (selectedShop) {
+        query = query.eq("shop_name", selectedShop);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        alert("โหลดข้อมูลผิดพลาด");
+        console.error(error);
+        return;
+      }
+
+      renderShopList(data);
+      renderTable(data);
+      loadMonthlySummary(data);
+    }
+
+    function renderShopList(data) {
+      const uniqueShops = Array.from(new Set(data.map(d => d.shop_name).filter(Boolean)));
+      shopFilter.innerHTML = `<option value="">ทั้งหมด</option>` + uniqueShops.map(shop => `<option value="${shop}">${shop}</option>`).join("");
+    }
+
+    function renderTable(data) {
+      const summaryByShop = {};
+      let totalAmt = 0, totalQty = 0, totalRet = 0, totalRef = 0;
+
+      data.forEach(entry => {
+        const shop = entry.shop_name || "ไม่ระบุร้าน";
+        if (!summaryByShop[shop]) {
+          summaryByShop[shop] = { amt: 0, qty: 0, ret: 0, ref: 0 };
+        }
+
+        entry.skus.forEach(sku => {
+          summaryByShop[shop].amt += sku.amt || 0;
+          summaryByShop[shop].qty += sku.qty || 0;
+          summaryByShop[shop].ret += sku.ret || 0;
+          summaryByShop[shop].ref += sku.ref || 0;
+
+          totalAmt += sku.amt || 0;
+          totalQty += sku.qty || 0;
+          totalRet += sku.ret || 0;
+          totalRef += sku.ref || 0;
         });
-        filtered = filtered.filter(row => validDates.has(dayjs(row.date).format('YYYY-MM-DD')));
-      }
+      });
 
-      updateSummary(filtered);
+      document.getElementById("summaryCards").innerHTML = `
+        <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+          <h6 class="card-title text-muted">ยอดขายรวม</h6>
+          <h5 class="text-success fw-bold">฿${formatNumber(totalAmt)}</h5></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+          <h6 class="card-title text-muted">จำนวนออเดอร์</h6>
+          <h5 class="fw-bold">${formatNumber(totalQty)}</h5></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+          <h6 class="card-title text-muted">จำนวนตีกลับ</h6>
+          <h5 class="text-danger fw-bold">${formatNumber(totalRet)}</h5></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+          <h6 class="card-title text-muted">ยอดตีกลับ</h6>
+          <h5 class="text-danger fw-bold">฿${formatNumber(totalRef)}</h5></div></div></div>
+      `;
 
-      const monthlyTable = document.querySelector('#monthlyTable tbody');
-      monthlyTable.innerHTML = '';
-      const monthlyGroup = groupBy(filtered, r => `${r.shop_name}_${dayjs(r.date).format('YYYY-MM')}`);
-      for (const key in monthlyGroup) {
-        const [shop, monthStr] = key.split('_');
-        const rows = monthlyGroup[key];
-        const sum = rows.reduce((acc, r) => {
-          acc.order += +r.order_count || 0;
-          acc.return += +r.return_count || 0;
-          acc.revenue += +r.revenue || 0;
-          acc.refund += +r.refund || 0;
-          return acc;
-        }, { order: 0, return: 0, revenue: 0, refund: 0 });
+      let html = `<div class="table-responsive mt-3"><table class="table table-bordered table-hover bg-white">
+        <thead class="table-light text-center">
+          <tr><th>ร้านค้า</th><th>ยอดขายรวม</th><th>จำนวนออเดอร์</th><th>จำนวนตีกลับ</th><th>ยอดตีกลับ</th></tr>
+        </thead><tbody>`;
 
-        const monthNum = parseInt(monthStr.split('-')[1], 10);
-        const thaiMonth = thaiMonths[monthNum - 1];
-        monthlyTable.innerHTML += `
-          <tr>
-            <td>${shop}</td>
-            <td>${thaiMonth} ${monthStr.split('-')[0]}</td>
-            <td>${sum.order.toLocaleString()}</td>
-            <td>${sum.return.toLocaleString()}</td>
-            <td>${formatCurrency(sum.revenue)}</td>
-            <td>${formatCurrency(sum.refund)}</td>
-          </tr>`;
-      }
+      Object.entries(summaryByShop).forEach(([shop, s]) => {
+        html += `<tr>
+          <td>${shop}</td>
+          <td class="text-end text-success">฿${formatNumber(s.amt)}</td>
+          <td class="text-end">${formatNumber(s.qty)}</td>
+          <td class="text-end text-danger">${formatNumber(s.ret)}</td>
+          <td class="text-end text-danger">฿${formatNumber(s.ref)}</td>
+        </tr>`;
+      });
 
-      const dailyTable = document.querySelector('#dailyTable tbody');
-      dailyTable.innerHTML = '';
-      const dailyGroup = groupBy(filtered, r => `${r.date}_${r.shop_name}`);
-      for (const key in dailyGroup) {
-        const [date, shop] = key.split('_');
-        const rows = dailyGroup[key];
-        const sum = rows.reduce((acc, r) => {
-          acc.order += +r.order_count || 0;
-          acc.return += +r.return_count || 0;
-          acc.revenue += +r.revenue || 0;
-          acc.refund += +r.refund || 0;
-          return acc;
-        }, { order: 0, return: 0, revenue: 0, refund: 0 });
-        dailyTable.innerHTML += `
-          <tr>
-            <td>${date}</td>
-            <td>${shop}</td>
-            <td>${sum.order.toLocaleString()}</td>
-            <td>${sum.return.toLocaleString()}</td>
-            <td>${formatCurrency(sum.revenue)}</td>
-            <td>${formatCurrency(sum.refund)}</td>
-          </tr>`;
-      }
+      html += `</tbody></table></div>`;
+      document.getElementById("shopTableContainer").innerHTML = html;
+    }
+
+    function loadMonthlySummary(data) {
+      const monthlySummary = Array.from({ length: 12 }, (_, i) => ({ month: i, qty: 0, ret: 0, amt: 0, ref: 0 }));
+
+      data.forEach(entry => {
+        const date = dayjs(entry.date);
+        let monthIndex = date.date() >= 26 ? date.month() + 1 : date.month();
+        if (monthIndex === 12) monthIndex = 0;
+
+        entry.skus.forEach(sku => {
+          monthlySummary[monthIndex].qty += sku.qty || 0;
+          monthlySummary[monthIndex].ret += sku.ret || 0;
+          monthlySummary[monthIndex].amt += sku.amt || 0;
+          monthlySummary[monthIndex].ref += sku.ref || 0;
+        });
+      });
+
+      let totalQty = 0, totalRet = 0, totalAmt = 0, totalRef = 0;
+      let html = `<div class="card mt-5"><div class="card-header fw-bold">📅 รายละเอียดยอดขายรายเดือน</div>
+        <div class="card-body table-responsive"><table class="table table-bordered text-end align-middle">
+          <thead class="table-light text-center">
+            <tr><th>เดือน</th><th>ออเดอร์</th><th>จำนวนตีกลับ</th><th>รายได้</th><th>ยอดตีกลับ</th></tr>
+          </thead><tbody>`;
+
+      monthlySummary.forEach((m, i) => {
+        totalQty += m.qty; totalRet += m.ret; totalAmt += m.amt; totalRef += m.ref;
+        html += `<tr>
+          <td class="text-center">${monthNames[i]}</td>
+          <td>${formatNumber(m.qty)}</td>
+          <td>${formatNumber(m.ret)}</td>
+          <td>฿${formatNumber(m.amt)}</td>
+          <td>฿${formatNumber(m.ref)}</td>
+        </tr>`;
+      });
+
+      html += `<tr class="table-dark fw-bold">
+        <td class="text-center">รวม</td>
+        <td>${formatNumber(totalQty)}</td>
+        <td>${formatNumber(totalRet)}</td>
+        <td>฿${formatNumber(totalAmt)}</td>
+        <td>฿${formatNumber(totalRef)}</td>
+      </tr></tbody></table></div></div>`;
+
+      document.getElementById("monthlySummaryContainer").innerHTML = html;
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      yearSelect.value = new Date().getFullYear();
+      loadData();
     });
-  });
-</script>
+  </script>
 </body>
 </html>
