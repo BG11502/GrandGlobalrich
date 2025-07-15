@@ -52,20 +52,26 @@
         <label class="form-label">เลือกปี</label>
         <select id="yearSelect" class="form-select"></select>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label">เลือกเดือน (หลายเดือน)</label>
         <div class="d-flex flex-wrap gap-1" id="monthCheckboxes">
           </div>
       </div>
       <div class="col-md-3">
+        <label class="form-label">เลือกเจ้าของบัญชี</label>
+        <select id="ownerSelect" class="form-select">
+          <option value="">ทั้งหมด</option>
+          </select>
+      </div>
+      <div class="col-md-4">
         <label class="form-label">เลือกช่วงวันที่</label>
         <div class="input-group">
           <input type="date" id="startDate" class="form-control" />
           <input type="date" id="endDate" class="form-control" />
         </div>
       </div>
-      <div class="col-md-3 d-flex gap-2">
-        <button class="btn btn-success w-100" onclick="applyFilter()"><i class="bi bi-filter-circle"></i> ยืนยันการกรอง</button>
+      <div class="col-md-12 d-flex gap-2 justify-content-end mt-2">
+        <button class="btn btn-success" onclick="applyFilter()"><i class="bi bi-filter-circle"></i> ยืนยันการกรอง</button>
         <button class="btn btn-danger" onclick="resetFilter()"><i class="bi bi-x-circle"></i> ล้างการกรอง</button>
       </div>
     </div>
@@ -82,20 +88,50 @@
   <div id="ownerSummaryContainer">
       </div>
 
-  <div class="card p-3">
-    <h5 class="text-secondary mb-3"><i class="bi bi-calendar3"></i> ยอดรวมค่ารายเดือน (ตัดยอด 26-25)</h5>
-    <div class="table-responsive">
-      <table class="table table-striped text-center align-middle">
-        <thead>
-          <tr>
-            <th>เดือน</th><th>ค่าแอด</th><th>จำนวนซื้อ</th><th>รายได้</th><th>กำไรเบื้องต้น</th>
-          </tr>
-        </thead>
-        <tbody id="monthlyTableBody"></tbody>
-      </table>
+  <div class="card p-3 mb-4">
+    <h5 class="text-secondary mb-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-calendar3"></i> ยอดรวมค่ารายเดือน (ตัดยอด 26-25)</span>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#monthlyTableCollapse" aria-expanded="false" aria-controls="monthlyTableCollapse"> <i class="bi bi-eye"></i> ซ่อน/แสดง
+        </button>
+    </h5>
+    <div class="collapse" id="monthlyTableCollapse"> <div class="table-responsive">
+        <table class="table table-striped text-center align-middle">
+          <thead>
+            <tr>
+              <th>เดือน</th><th>ค่าแอด</th><th>จำนวนซื้อ</th><th>รายได้</th><th>กำไรเบื้องต้น</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
-</div>
+  <div class="card p-3">
+    <h5 class="text-secondary mb-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-calendar-day"></i> ยอดรวมค่ารายวัน</span>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#dailyTableCollapse" aria-expanded="false" aria-controls="dailyTableCollapse"> <i class="bi bi-eye"></i> ซ่อน/แสดง
+        </button>
+    </h5>
+    <div class="collapse" id="dailyTableCollapse"> <div class="table-responsive">
+        <table class="table table-striped text-center align-middle">
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>ค่าแอด</th>
+              <th>จำนวนซื้อ</th>
+              <th>ต้นทุน/ซื้อ</th>
+              <th>รายได้</th>
+              <th>ROAS</th>
+            </tr>
+          </thead>
+          <tbody id="dailyTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 const _supabase = supabase.createClient(
@@ -135,7 +171,30 @@ async function loadData() {
     return alert("โหลดข้อมูลไม่สำเร็จ: " + error.message);
   }
   allData = data || [];
+  populateOwnerFilter(allData); // เรียกใช้เพื่อ populate owner filter
   applyFilter(); // กรองข้อมูลและแสดงผลหลังจากโหลดเสร็จ
+}
+
+function populateOwnerFilter(data) {
+  const ownerSelect = document.getElementById('ownerSelect');
+  const owners = new Set(); // ใช้ Set เพื่อเก็บชื่อเจ้าของที่ไม่ซ้ำกัน
+
+  data.forEach(item => {
+    if (item.owner) { // ตรวจสอบว่ามีค่า owner
+      owners.add(item.owner);
+    }
+  });
+
+  // ล้าง option เก่าออกทั้งหมด ยกเว้น "ทั้งหมด"
+  ownerSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+
+  // เพิ่ม owner ที่ไม่ซ้ำกันเข้าไปใน select box โดยเรียงตามตัวอักษร
+  Array.from(owners).sort().forEach(owner => {
+    const option = document.createElement('option');
+    option.value = owner;
+    option.textContent = owner;
+    ownerSelect.appendChild(option);
+  });
 }
 
 function applyFilter() {
@@ -143,10 +202,15 @@ function applyFilter() {
   const selectedMonths = [...document.querySelectorAll('#monthCheckboxes input:checked')].map(c => +c.value);
   const startDateInput = document.getElementById("startDate").value;
   const endDateInput = document.getElementById("endDate").value;
+  const selectedOwner = document.getElementById('ownerSelect').value; // ดึงค่า owner ที่เลือก
 
   let filtered = allData.filter(d => {
     const dataDate = new Date(d.date);
-    let isWithinDateRange = true; // Assume true if no specific start/end dates are provided
+
+    // Filter by owner
+    if (selectedOwner && d.owner !== selectedOwner) {
+      return false; // Skip if owner doesn't match
+    }
 
     // Check custom date range if provided (Highest priority)
     if (startDateInput && endDateInput) {
@@ -197,13 +261,15 @@ function applyFilter() {
 
   renderSummary(filtered);
   renderOwnerSummary(filtered);
-  renderMonthly(filtered); // This will now process the filtered data based on 26-25 logic
+  renderMonthly(filtered);
+  renderDailySummary(filtered);
 }
 
 function resetFilter() {
   document.getElementById('startDate').value = '';
   document.getElementById('endDate').value = '';
   document.querySelectorAll('#monthCheckboxes input').forEach(c => c.checked = false);
+  document.getElementById('ownerSelect').value = ''; // Reset owner filter
   // Set current year as default
   document.getElementById('yearSelect').value = new Date().getFullYear();
   applyFilter();
@@ -248,7 +314,7 @@ function renderOwnerSummary(data) {
 
     groupedByOwner[owner].totalSpend += +item.spend_total;
     groupedByOwner[owner].totalPurchases += +item.purchases;
-    groupedByOwner[owner].totalRevenue += +item.revenue;
+    groupedByOwner[owner].totalRevenue += +item.revenue; // แก้ไขชื่อตัวแปรที่พิมพ์ผิด (ownerTotalRevenue -> totalRevenue)
 
     // Use a unique key for each account based on name and ID
     const accountName = item.account_name || 'ไม่ระบุชื่อบัญชี';
@@ -419,6 +485,47 @@ function renderMonthly(data) {
     </tr>`;
   }
 }
+
+function renderDailySummary(data) {
+  const daily = {};
+  const dailyTableBody = document.getElementById("dailyTableBody");
+  dailyTableBody.innerHTML = ""; // Clear existing data
+
+  // Group data by exact date
+  data.forEach(item => {
+    const date = new Date(item.date).toISOString().split('T')[0]; // Get date in YYYY-MM-DD format
+    if (!daily[date]) {
+      daily[date] = {
+        spend: 0,
+        purchases: 0,
+        revenue: 0
+      };
+    }
+    daily[date].spend += +item.spend_total;
+    daily[date].purchases += +item.purchases;
+    daily[date].revenue += +item.revenue;
+  });
+
+  // Sort dates
+  const sortedDates = Object.keys(daily).sort();
+
+  sortedDates.forEach(date => {
+    const dailyData = daily[date];
+    const avgCostPerPurchase = dailyData.purchases > 0 ? dailyData.spend / dailyData.purchases : 0;
+    const roas = dailyData.spend > 0 ? (dailyData.revenue / dailyData.spend) : 0;
+
+    const row = dailyTableBody.insertRow();
+    row.innerHTML = `
+      <td>${date}</td>
+      <td class="text-money">฿${dailyData.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+      <td>${dailyData.purchases.toLocaleString()}</td>
+      <td>฿${avgCostPerPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+      <td class="text-money">฿${dailyData.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+      <td class="text-roas">${roas.toFixed(2)}</td>
+    `;
+  });
+}
+
 </script>
 </body>
 </html>
