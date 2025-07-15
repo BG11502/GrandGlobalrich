@@ -24,21 +24,28 @@
       color: #dc3545; /* Red for negative values / refunds */
       font-weight: bold;
     }
-    /* Optional: Style for ROAS to stand out slightly if needed */
     .text-roas {
         font-weight: bold;
         color: #007bff; /* Blue */
+    }
+    /* เพิ่มการจัดสไตล์สำหรับหัวข้อตารางของแต่ละเจ้าของบัญชี */
+    .owner-summary-header {
+        background-color: #e9ecef; /* สีพื้นหลังอ่อนๆ */
+        padding: 10px 15px;
+        margin-bottom: 15px;
+        border-radius: .25rem;
+        border: 1px solid #dee2e6;
     }
   </style>
 </head>
 <body>
 <div class="container py-4">
   <h2 class="text-center mb-4 text-primary">📊 รายงานสรุปค่าแอด</h2>
-<div class="container py-4">
   <div class="d-flex justify-content-between mb-4">
     <a href="ค่าแอด.html" class="btn btn-outline-primary btn-icon"><i class="bi bi-house-door"></i> สรุปยอดค่าแอด </a>
     <a href="index.html" class="btn btn-outline-secondary btn-icon"><i class="bi bi-graph-up-arrow"></i> หน้าหลัก</a>
   </div>
+
   <div class="card p-3 mb-4">
     <div class="row g-2 align-items-end">
       <div class="col-md-2">
@@ -72,22 +79,11 @@
     <div class="col"><div class="card"><div class="card-body">ROAS<br><span id="totalRoas" class="text-roas">0.00</span></div></div></div>
   </div>
 
-  <div class="card p-3 mb-4">
-    <h5 class="text-secondary mb-3"><i class="bi bi-person-lines-fill me-2"></i> สรุปค่าแอดแต่ละเจ้าของบัญชี</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered text-center align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>เจ้าของบัญชี</th><th>ค่าแอด</th><th>ต้นทุน/ซื้อ</th><th>จำนวนซื้อ</th><th>รายได้</th><th>ROAS</th>
-          </tr>
-        </thead>
-        <tbody id="ownerSummaryBody"></tbody>
-      </table>
-    </div>
-  </div>
+  <div id="ownerSummaryContainer">
+      </div>
 
   <div class="card p-3">
-    <h5 class="text-secondary mb-3"><i class="bi bi-calendar3"></i>  ยอดรวมค่ารายเดือน (ตัดยอด 26-25)</h5>
+    <h5 class="text-secondary mb-3"><i class="bi bi-calendar3"></i> ยอดรวมค่ารายเดือน (ตัดยอด 26-25)</h5>
     <div class="table-responsive">
       <table class="table table-striped text-center align-middle">
         <thead>
@@ -235,32 +231,129 @@ function renderSummary(data) {
 }
 
 function renderOwnerSummary(data) {
-  const grouped = {};
-  data.forEach(e => {
-    const owner = e.owner;
-    if (!grouped[owner]) {
-      grouped[owner] = { spend: 0, purchases: 0, revenue: 0 };
+  const ownerContainer = document.getElementById("ownerSummaryContainer");
+  ownerContainer.innerHTML = ""; // Clear existing data
+
+  const groupedByOwner = {};
+  data.forEach(item => {
+    const owner = item.owner;
+    if (!groupedByOwner[owner]) {
+      groupedByOwner[owner] = {
+        totalSpend: 0,
+        totalPurchases: 0,
+        totalRevenue: 0,
+        accounts: {} // To store aggregated data for each account_name/account_id
+      };
     }
-    grouped[owner].spend += +e.spend_total;
-    grouped[owner].purchases += +e.purchases;
-    grouped[owner].revenue += +e.revenue;
+
+    groupedByOwner[owner].totalSpend += +item.spend_total;
+    groupedByOwner[owner].totalPurchases += +item.purchases;
+    groupedByOwner[owner].totalRevenue += +item.revenue;
+
+    // Use a unique key for each account based on name and ID
+    const accountName = item.account_name || 'ไม่ระบุชื่อบัญชี';
+    const accountId = item.account_id || 'ไม่ระบุ ID บัญชี';
+    const accountKey = `${accountName}||${accountId}`;
+
+    if (!groupedByOwner[owner].accounts[accountKey]) {
+      groupedByOwner[owner].accounts[accountKey] = {
+        account_name: accountName,
+        account_id: accountId,
+        spend: 0,
+        purchases: 0,
+        revenue: 0
+      };
+    }
+    groupedByOwner[owner].accounts[accountKey].spend += +item.spend_total;
+    groupedByOwner[owner].accounts[accountKey].purchases += +item.purchases;
+    groupedByOwner[owner].accounts[accountKey].revenue += +item.revenue;
   });
 
-  const tbody = document.getElementById("ownerSummaryBody");
-  tbody.innerHTML = "";
+  // Sort owners by name for consistent display
+  const sortedOwners = Object.keys(groupedByOwner).sort();
 
-  Object.entries(grouped).forEach(([owner, g]) => {
-    const ownerAvgCostPerPurchase = g.purchases > 0 ? g.spend / g.purchases : 0;
-    const ownerRoas = g.spend > 0 ? (g.revenue / g.spend) : 0;
+  // Generate a table for each owner
+  sortedOwners.forEach(ownerName => {
+    const ownerData = groupedByOwner[ownerName];
 
-    tbody.innerHTML += `<tr>
-      <td>${owner}</td>
-      <td class="text-money">฿${g.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-      <td>฿${ownerAvgCostPerPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-      <td>${g.purchases.toLocaleString()}</td>
-      <td class="text-money">฿${g.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-      <td class="text-roas">${ownerRoas.toFixed(2)}</td>
-    </tr>`;
+    // Calculate totals for the current owner
+    const ownerTotalSpend = ownerData.totalSpend;
+    const ownerTotalPurchases = ownerData.totalPurchases;
+    const ownerTotalRevenue = ownerData.totalRevenue;
+    const ownerAvgCostPerPurchase = ownerTotalPurchases > 0 ? ownerTotalSpend / ownerTotalPurchases : 0;
+    const ownerRoas = ownerTotalSpend > 0 ? (ownerTotalRevenue / ownerTotalSpend) : 0;
+
+    // --- Create main card div ---
+    const ownerCardDiv = document.createElement('div');
+    ownerCardDiv.className = 'card p-3 mb-4';
+
+    // --- Create header for the owner ---
+    const ownerHeader = document.createElement('h5');
+    ownerHeader.className = 'text-secondary mb-3 owner-summary-header';
+    ownerHeader.innerHTML = `
+        <i class="bi bi-person-fill me-2"></i> เจ้าของบัญชี: ${ownerName}
+        <span class="ms-3">| ค่าแอดรวม: <span class="text-money">฿${ownerTotalSpend.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></span>
+        <span class="ms-3">| จำนวนซื้อรวม: ${ownerTotalPurchases.toLocaleString()}</span>
+        <span class="ms-3">| รายได้รวม: <span class="text-money">฿${ownerTotalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></span>
+        <span class="ms-3">| ROAS รวม: <span class="text-roas">${ownerRoas.toFixed(2)}</span></span>
+    `;
+    ownerCardDiv.appendChild(ownerHeader);
+
+    // --- Create table responsive div ---
+    const tableResponsiveDiv = document.createElement('div');
+    tableResponsiveDiv.className = 'table-responsive';
+    ownerCardDiv.appendChild(tableResponsiveDiv);
+
+    // --- Create the table ---
+    const table = document.createElement('table');
+    table.className = 'table table-bordered text-center align-middle';
+    tableResponsiveDiv.appendChild(table);
+
+    // --- Create table header (thead) ---
+    const thead = document.createElement('thead');
+    thead.className = 'table-light';
+    thead.innerHTML = `
+        <tr>
+            <th>ชื่อบัญชี</th>
+            <th>ID บัญชี</th>
+            <th>ค่าแอด</th>
+            <th>ต้นทุน/ซื้อ</th>
+            <th>จำนวนซื้อ</th>
+            <th>รายได้</th>
+            <th>ROAS</th>
+        </tr>
+    `;
+    table.appendChild(thead);
+
+    // --- Create table body (tbody) for accounts ---
+    const tbody = document.createElement('tbody');
+    // Ensure the ID is valid by removing non-alphanumeric characters
+    tbody.id = `ownerAccountsTableBody-${ownerName.replace(/[^a-zA-Z0-9]/g, '')}`;
+    table.appendChild(tbody); // Append tbody to table *before* adding rows to it
+
+    // --- Append the entire card to the main container ---
+    ownerContainer.appendChild(ownerCardDiv);
+
+    // --- Add account details to the table for this owner ---
+    // Sort accounts by account_name for consistent display within each owner
+    const sortedAccounts = Object.values(ownerData.accounts).sort((a, b) => a.account_name.localeCompare(b.account_name));
+
+    sortedAccounts.forEach(account => {
+      const accountAvgCostPerPurchase = account.purchases > 0 ? account.spend / account.purchases : 0;
+      const accountRoas = account.spend > 0 ? (account.revenue / account.spend) : 0;
+
+      const row = document.createElement('tr'); // Create a new row element
+      row.innerHTML = `
+        <td>${account.account_name}</td>
+        <td>${account.account_id}</td>
+        <td class="text-money">฿${account.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td>฿${accountAvgCostPerPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td>${account.purchases.toLocaleString()}</td>
+        <td class="text-money">฿${account.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td class="text-roas">${accountRoas.toFixed(2)}</td>
+      `;
+      tbody.appendChild(row); // Append the row to the tbody directly
+    });
   });
 }
 
