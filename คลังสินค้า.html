@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>จัดการชื่อสินค้า</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+        .table-custom th, .table-custom td {
+            vertical-align: middle;
+        }
+        .card-header.bg-primary {
+            background-color: #0d6efd !important;
+        }
+        .btn-close-white {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex justify-content-end gap-2 mt-3 px-3">
+        <button class="btn btn-outline-secondary" onclick="history.back()">⬅️ ย้อนกลับ</button>
+        <a href="index.html" class="btn btn-primary">🏠 หน้าหลัก</a>
+    </div>
+
+    <h2 class="text-center text-primary my-4">🏷️ จัดการชื่อสินค้า</h2>
+
+    <div class="container py-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">รายการชื่อสินค้า</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <input type="text" id="searchProduct" class="form-control w-50" placeholder="ค้นหาชื่อสินค้า" onkeyup="filterProductTable()">
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#productModal">
+                        <i class="bi bi-plus-circle"></i> เพิ่มชื่อสินค้าใหม่
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped table-custom">
+                        <thead>
+                            <tr>
+                                <th>ชื่อสินค้า</th>
+                                <th class="text-end">วันที่สร้าง</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productTableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="productModalLabel">บันทึกชื่อสินค้า</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="productForm">
+                        <input type="hidden" id="productId">
+                        <div class="mb-3">
+                            <label for="productNameInput" class="form-label">ชื่อสินค้า:</label>
+                            <input type="text" class="form-control" id="productNameInput" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">บันทึก</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Supabase Client Initialization ---
+        // IMPORTANT: Replace with your actual Supabase URL and Anon Key
+        const _supabase = supabase.createClient(
+    'https://vzxttbvwukpsxqdaulvo.supabase.co', // วาง URL ที่คัดลอกมาที่นี่
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U' // วาง Anon Key ที่คัดลอกมาที่นี่
+);
+
+        let productNamesData = []; // To store fetched product names
+
+        async function fetchProductNamesData() {
+            console.log("Fetching product names data...");
+            const { data, error } = await _supabase
+                .from('product_names') // ดึงข้อมูลจากตาราง product_names
+                .select('*')
+                .order('product_name', { ascending: true }); // จัดเรียงตามชื่อสินค้า
+
+            if (error) {
+                console.error('Error fetching product names data:', error.message);
+                alert('ไม่สามารถโหลดข้อมูลชื่อสินค้าได้: ' + error.message);
+                return;
+            }
+            productNamesData = data;
+            renderProductTable();
+            console.log("Product names data fetched:", productNamesData);
+        }
+
+        function renderProductTable() {
+            const tableBody = document.getElementById('productTableBody');
+            tableBody.innerHTML = ''; // ล้างแถวที่มีอยู่เดิม
+            const searchTerm = document.getElementById('searchProduct').value.toLowerCase();
+
+            if (productNamesData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">ยังไม่มีข้อมูลชื่อสินค้า กรุณาเพิ่มข้อมูลใหม่</td></tr>';
+                return;
+            }
+
+            const filteredData = productNamesData.filter(item => {
+                return item.product_name.toLowerCase().includes(searchTerm);
+            });
+
+            if (filteredData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">ไม่พบข้อมูลชื่อสินค้าที่ตรงกับการค้นหา</td></tr>';
+                return;
+            }
+
+            filteredData.forEach(item => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${item.product_name}</td>
+                    <td class="text-end">${new Date(item.created_at).toLocaleDateString('th-TH')}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct('${item.id}')">
+                            <i class="bi bi-pencil-square"></i> แก้ไข
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${item.id}')">
+                            <i class="bi bi-trash"></i> ลบ
+                        </button>
+                    </td>
+                `;
+            });
+        }
+
+        function filterProductTable() {
+            renderProductTable(); // แสดงตารางใหม่ตามคำค้นหา
+        }
+
+        // จัดการการ Submit ฟอร์มสำหรับการเพิ่ม/แก้ไขสินค้า
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('productId').value;
+            const productName = document.getElementById('productNameInput').value.trim();
+
+            if (!productName) {
+                alert('กรุณากรอกชื่อสินค้า');
+                return;
+            }
+
+            const productData = {
+                product_name: productName
+            };
+
+            let error = null;
+            if (id) {
+                // อัปเดตรายการที่มีอยู่
+                const { error: updateError } = await _supabase
+                    .from('product_names')
+                    .update(productData)
+                    .eq('id', id);
+                error = updateError;
+            } else {
+                // เพิ่มรายการใหม่
+                const { error: insertError } = await _supabase
+                    .from('product_names')
+                    .insert([productData]);
+                error = insertError;
+            }
+
+            if (error) {
+                console.error('Error saving product name:', error.message);
+                if (error.code === '23505') { // Unique violation error code for PostgreSQL
+                    alert('บันทึกชื่อสินค้าไม่สำเร็จ: ชื่อสินค้าซ้ำ กรุณาใช้ชื่ออื่น');
+                } else {
+                    alert('บันทึกชื่อสินค้าไม่สำเร็จ: ' + error.message);
+                }
+            } else {
+                alert('บันทึกชื่อสินค้าสำเร็จ!');
+                // ปิด Modal
+                const modalElement = document.getElementById('productModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+                document.getElementById('productForm').reset();
+                document.getElementById('productId').value = '';
+                fetchProductNamesData(); // โหลดข้อมูลใหม่
+            }
+        });
+
+        async function editProduct(id) {
+            const itemToEdit = productNamesData.find(item => item.id === id);
+            if (itemToEdit) {
+                document.getElementById('productId').value = itemToEdit.id;
+                document.getElementById('productNameInput').value = itemToEdit.product_name;
+                
+                // เปิด Modal
+                const modal = new bootstrap.Modal(document.getElementById('productModal'));
+                modal.show();
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (confirm('คุณต้องการลบชื่อสินค้านี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+                const { error } = await _supabase
+                    .from('product_names')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) {
+                    console.error('Error deleting product name:', error.message);
+                    alert('ลบชื่อสินค้าไม่สำเร็จ: ' + error.message);
+                } else {
+                    alert('ลบชื่อสินค้าสำเร็จ!');
+                    fetchProductNamesData(); // โหลดข้อมูลใหม่
+                }
+            }
+        }
+
+        // ล้างฟอร์มและ ID เมื่อ Modal ถูกปิด
+        document.getElementById('productModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productModalLabel').textContent = 'บันทึกชื่อสินค้า'; // รีเซ็ตชื่อ Modal
+        });
+
+        // กำหนดชื่อ Modal ให้ถูกต้องเมื่อเปิด Modal
+        document.getElementById('productModal').addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget; // ปุ่มที่เรียก Modal
+            if (button && button.classList.contains('btn-success')) {
+                document.getElementById('productModalLabel').textContent = 'เพิ่มชื่อสินค้าใหม่';
+            } else {
+                document.getElementById('productModalLabel').textContent = 'แก้ไขชื่อสินค้า';
+            }
+        });
+
+        // เริ่มโหลดข้อมูลเมื่อหน้าเว็บโหลดเสร็จ
+        window.addEventListener("DOMContentLoaded", () => {
+            fetchProductNamesData();
+        });
+    </script>
+</body>
+</html>
