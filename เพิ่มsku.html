@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>จัดการ SKU จาก Supabase (daily_sku_usage_skus) - แก้ไขสินค้าและจำนวนกระปุก</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      padding: 1.5rem;
+      background: #f8f9fa;
+    }
+    table {
+      min-width: 600px;
+    }
+    select.product-select, input.qty-input {
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 0.25rem;
+    }
+    td > input.qty-input {
+      max-width: 80px;
+      text-align: center;
+      display: inline-block;
+      margin-right: 0.25rem;
+    }
+    td > select.product-select {
+      max-width: 200px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    button.add-product-btn {
+      margin-top: 4px;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container my-3">
+  <div class="d-flex justify-content-between align-items-center">
+    <a href="index.html" class="btn btn-primary">
+      <i class="bi bi-house-door-fill"></i> หน้าหลัก
+    </a>
+    <a href="คลังสินค้า.html" class="btn btn-primary">
+      <i class="bi bi-house-door-fill"></i> คลังสินค้า
+    </a>
+  </div>
+</div>
+
+  <div class="container">
+    
+    <h2 class="mb-4 text-center">📦 จัดการข้อมูล SKU จาก Supabase</h2>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped align-middle text-center">
+        <thead class="table-light">
+          <tr>
+            <th>SKU Name</th>
+            <th>สินค้า (แก้ไขได้)</th>
+            <th>จำนวนกระปุก (แก้ไขได้)</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="skuTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const tbody = document.getElementById('skuTableBody');
+
+    let skuData = [];
+    let productList = []; // รายชื่อสินค้าจาก product_names
+
+    // ฟังก์ชันช่วยแปลง product + qty เป็น string product_description ตามรูปแบบ "สินค้า ชื่อสินค้า จำนวนกระปุก + ชื่อสินค้า จำนวนกระปุก ..."
+    function buildDescription(details) {
+      if (!details || details.length === 0) return '';
+      return 'สินค้า ' + details
+        .map(d => `${d.product} ${d.qty} กระปุก`)
+        .join('+');
+    }
+
+    // ฟังก์ชันช่วยแยก product_description เป็น array รายการ { product, qty }
+    function parseDescription(desc) {
+      if (!desc) return [];
+      const prefixRemoved = desc.replace(/^สินค้า\s*/, '');
+      if (!prefixRemoved) return [];
+      const parts = prefixRemoved.split('+');
+      return parts.map(part => {
+        const m = part.match(/(.+?)\s*([0-9]+)\s*กระปุก/);
+        if (m) {
+          return {
+            product: m[1].trim(),
+            qty: parseInt(m[2], 10)
+          };
+        } else {
+          return {
+            product: part.trim(),
+            qty: 0
+          };
+        }
+      });
+    }
+
+    async function loadProductList() {
+      const { data, error } = await supabaseClient
+        .from('product_names')
+        .select('product_name')
+        .order('product_name', { ascending: true });
+
+      if (error) {
+        alert('โหลดข้อมูลสินค้าไม่สำเร็จ: ' + error.message);
+        productList = [];
+      } else {
+        productList = data.map(item => item.product_name);
+      }
+    }
+
+    async function loadData() {
+      await loadProductList();
+
+      const { data, error } = await supabaseClient
+        .from('daily_sku_usage_skus')
+        .select('id, sku_name, product_description')
+        .order('sku_name', { ascending: true });
+
+      if (error) {
+        alert('โหลดข้อมูลผิดพลาด: ' + error.message);
+        return;
+      }
+
+      skuData = (data || []).map(item => ({
+        id: item.id,
+        sku_name: item.sku_name,
+        details: parseDescription(item.product_description)
+      }));
+
+      renderTable();
+    }
+
+    // สร้าง select dropdown สินค้า จาก productList พร้อมเลือกค่า default (ถ้ามี)
+    function createProductSelect(selectedProduct = '') {
+      const select = document.createElement('select');
+      select.className = 'form-select form-select-sm product-select';
+      select.required = true;
+
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = '-- เลือกสินค้า --';
+      defaultOption.disabled = true;
+      defaultOption.selected = !selectedProduct;
+      select.appendChild(defaultOption);
+
+      productList.forEach(product => {
+        const option = document.createElement('option');
+        option.value = product;
+        option.textContent = product;
+        if (product === selectedProduct) option.selected = true;
+        select.appendChild(option);
+      });
+
+      return select;
+    }
+
+    function renderTable() {
+      tbody.innerHTML = '';
+      skuData.forEach(({ id, sku_name, details }, index) => {
+        const tr = document.createElement('tr');
+        tr.dataset.index = index;
+
+        // สร้าง input แสดงสินค้าด้วย select dropdown เมื่อแก้ไข
+        let productInputsHtml = '';
+        let qtyInputsHtml = '';
+        details.forEach((d, i) => {
+          productInputsHtml += `<select class="form-select form-select-sm product-select" disabled data-detail-index="${i}">${productList.map(p => `<option value="${p}" ${p === d.product ? 'selected' : ''}>${p}</option>`).join('')}</select>`;
+          qtyInputsHtml += `<input type="number" min="0" class="form-control form-control-sm qty-input" disabled value="${d.qty}" data-detail-index="${i}" />`;
+        });
+
+        tr.innerHTML = `
+          <td class="align-middle">${sku_name || '-'}</td>
+          <td class="align-middle text-start product-container">${productInputsHtml}</td>
+          <td class="align-middle qty-container">${qtyInputsHtml}</td>
+          <td class="align-middle">
+            <div class="d-flex justify-content-center gap-2 mb-2">
+              <button class="btn btn-primary btn-sm edit-btn" title="แก้ไข">แก้ไข</button>
+              <button class="btn btn-danger btn-sm delete-btn" title="ลบ">ลบ</button>
+            </div>
+            <div class="d-flex justify-content-center gap-2 flex-wrap">
+              <button class="btn btn-success btn-sm save-btn d-none" title="บันทึก">บันทึก</button>
+              <button class="btn btn-secondary btn-sm cancel-btn d-none" title="ยกเลิก">ยกเลิก</button>
+              <button type="button" class="btn btn-info btn-sm add-product-btn d-none">+ เพิ่มสินค้า</button>
+            </div>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      addEventListeners();
+    }
+
+    function addEventListeners() {
+      // ปุ่มแก้ไข
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.onclick = e => {
+          const tr = e.target.closest('tr');
+          toggleEditMode(tr, true);
+        };
+      });
+
+      // ปุ่มยกเลิก
+      document.querySelectorAll('.cancel-btn').forEach(btn => {
+        btn.onclick = e => {
+          const tr = e.target.closest('tr');
+          toggleEditMode(tr, false, true);
+        };
+      });
+
+      // ปุ่มบันทึก
+      document.querySelectorAll('.save-btn').forEach(btn => {
+        btn.onclick = async e => {
+          const tr = e.target.closest('tr');
+          await saveRow(tr);
+        };
+      });
+
+      // ปุ่มเพิ่มสินค้า
+      document.querySelectorAll('.add-product-btn').forEach(btn => {
+        btn.onclick = e => {
+          const tr = e.target.closest('tr');
+          addProductInput(tr);
+        };
+      });
+
+      // ปุ่มลบ
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.onclick = async e => {
+          if (confirm('คุณแน่ใจหรือไม่ว่าจะลบข้อมูลนี้?')) {
+            const tr = e.target.closest('tr');
+            await deleteRow(tr);
+          }
+        };
+      });
+    }
+
+    function toggleEditMode(tr, isEditMode, reset = false) {
+      const productContainer = tr.querySelector('.product-container');
+      const qtyContainer = tr.querySelector('.qty-container');
+      const addProductBtn = tr.querySelector('.add-product-btn');
+
+      if (isEditMode) {
+        addProductBtn.classList.remove('d-none');
+      } else {
+        addProductBtn.classList.add('d-none');
+      }
+
+      const productSelects = productContainer.querySelectorAll('select.product-select');
+      const qtyInputs = qtyContainer.querySelectorAll('input.qty-input');
+
+      productSelects.forEach(select => select.disabled = !isEditMode);
+      qtyInputs.forEach(input => input.disabled = !isEditMode);
+
+      tr.querySelector('.edit-btn').classList.toggle('d-none', isEditMode);
+      tr.querySelector('.delete-btn').classList.toggle('d-none', isEditMode);
+      tr.querySelector('.save-btn').classList.toggle('d-none', !isEditMode);
+      tr.querySelector('.cancel-btn').classList.toggle('d-none', !isEditMode);
+
+      if (reset) {
+        const idx = tr.dataset.index;
+        const original = skuData[idx];
+
+        // รีเซ็ต input สินค้า
+        productContainer.innerHTML = '';
+        original.details.forEach(d => {
+          const sel = createProductSelect(d.product);
+          sel.disabled = true;
+          productContainer.appendChild(sel);
+        });
+
+        // รีเซ็ต input จำนวนกระปุก
+        qtyContainer.innerHTML = '';
+        original.details.forEach(d => {
+          const inp = document.createElement('input');
+          inp.type = 'number';
+          inp.min = 0;
+          inp.className = 'form-control form-control-sm qty-input';
+          inp.disabled = true;
+          inp.value = d.qty;
+          qtyContainer.appendChild(inp);
+        });
+      }
+    }
+
+    // เพิ่ม input สินค้าและจำนวนกระปุกใหม่ในแถวที่กำลังแก้ไข
+    function addProductInput(tr) {
+      const productContainer = tr.querySelector('.product-container');
+      const qtyContainer = tr.querySelector('.qty-container');
+
+      // สร้าง select ใหม่
+      const newSelect = createProductSelect();
+      productContainer.appendChild(newSelect);
+
+      // สร้าง input จำนวนกระปุกใหม่
+      const newQtyInput = document.createElement('input');
+      newQtyInput.type = 'number';
+      newQtyInput.min = 0;
+      newQtyInput.className = 'form-control form-control-sm qty-input';
+      newQtyInput.value = 0;
+      qtyContainer.appendChild(newQtyInput);
+    }
+
+    async function saveRow(tr) {
+      const idx = tr.dataset.index;
+      const sku = skuData[idx];
+
+      const productContainer = tr.querySelector('.product-container');
+      const qtyContainer = tr.querySelector('.qty-container');
+
+      const productSelects = productContainer.querySelectorAll('select.product-select');
+      const qtyInputs = qtyContainer.querySelectorAll('input.qty-input');
+
+      let newDetails = [];
+
+      for (let i = 0; i < productSelects.length; i++) {
+        let productVal = productSelects[i].value.trim();
+        let qtyVal = parseInt(qtyInputs[i].value);
+
+        if (!productVal) {
+          alert('กรุณาเลือกสินค้าในแถวที่ ' + (i + 1));
+          return;
+        }
+
+        if (isNaN(qtyVal) || qtyVal < 0) {
+          alert('จำนวนกระปุกต้องเป็นตัวเลข 0 ขึ้นไปในแถวที่ ' + (i + 1));
+          return;
+        }
+
+        newDetails.push({
+          product: productVal,
+          qty: qtyVal
+        });
+      }
+
+      // เช็คว่ามีสินค้าซ้ำกันไหม
+      const productNames = newDetails.map(d => d.product);
+      const duplicates = productNames.filter((item, i) => productNames.indexOf(item) !== i);
+      if (duplicates.length > 0) {
+        alert('มีสินค้าซ้ำกันในรายการ: ' + [...new Set(duplicates)].join(', '));
+        return;
+      }
+
+      const newDescription = buildDescription(newDetails);
+
+      const { error } = await supabaseClient
+        .from('daily_sku_usage_skus')
+        .update({ product_description: newDescription })
+        .eq('id', sku.id);
+
+      if (error) {
+        alert('บันทึกข้อมูลล้มเหลว: ' + error.message);
+        return;
+      }
+
+      skuData[idx].details = newDetails;
+      toggleEditMode(tr, false);
+      alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+    }
+
+    async function deleteRow(tr) {
+      const idx = tr.dataset.index;
+      const sku = skuData[idx];
+
+      const { error } = await supabaseClient
+        .from('daily_sku_usage_skus')
+        .delete()
+        .eq('id', sku.id);
+
+      if (error) {
+        alert('ลบข้อมูลล้มเหลว: ' + error.message);
+        return;
+      }
+
+      skuData.splice(idx, 1);
+      renderTable();
+      alert('ลบข้อมูลเรียบร้อยแล้ว');
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
