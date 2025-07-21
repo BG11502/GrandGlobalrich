@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const loggedInUser = localStorage.getItem('loggedInUser');
+      if (!loggedInUser) {
+        // ถ้าไม่มีข้อมูลผู้ใช้ใน localStorage ให้พาไปหน้า login.html
+        window.location.href = 'login.html';
+      }
+    });
+</script>
   <meta charset="UTF-8" />
   <title>รายงานสรุปค่าแอด</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -62,6 +71,12 @@
         <select id="ownerSelect" class="form-select">
           <option value="">ทั้งหมด</option>
           </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">เลือกชื่อบัญชี</label>
+        <select id="accountNameSelect" class="form-select">
+          <option value="">ทั้งหมด</option>
+        </select>
       </div>
       <div class="col-md-4">
         <label class="form-label">เลือกช่วงวันที่</label>
@@ -164,17 +179,10 @@ function initUI() {
   });
 }
 
-async function loadData() {
-  const { data, error } = await _supabase.from('ad_history').select('*');
-  if (error) {
-    console.error("โหลดข้อมูลไม่สำเร็จ:", error);
-    return alert("โหลดข้อมูลไม่สำเร็จ: " + error.message);
-  }
-  allData = data || [];
-  populateOwnerFilter(allData); // เรียกใช้เพื่อ populate owner filter
-  applyFilter(); // กรองข้อมูลและแสดงผลหลังจากโหลดเสร็จ
-}
-
+/**
+ * Populates the owner filter dropdown with unique owner names.
+ * @param {Array} data - The dataset to extract owner names from.
+ */
 function populateOwnerFilter(data) {
   const ownerSelect = document.getElementById('ownerSelect');
   const owners = new Set(); // ใช้ Set เพื่อเก็บชื่อเจ้าของที่ไม่ซ้ำกัน
@@ -197,12 +205,51 @@ function populateOwnerFilter(data) {
   });
 }
 
+/**
+ * Populates the account name filter dropdown with unique account names.
+ * @param {Array} data - The dataset to extract account names from.
+ */
+function populateAccountNameFilter(data) {
+  const accountNameSelect = document.getElementById('accountNameSelect');
+  const accountNames = new Set(); // ใช้ Set เพื่อเก็บชื่อบัญชีที่ไม่ซ้ำกัน
+
+  data.forEach(item => {
+    if (item.account_name) { // ตรวจสอบว่ามีค่า account_name
+      accountNames.add(item.account_name);
+    }
+  });
+
+  // ล้าง option เก่าออกทั้งหมด ยกเว้น "ทั้งหมด"
+  accountNameSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+  
+  // เพิ่ม account name ที่ไม่ซ้ำกันเข้าไปใน select box โดยเรียงตามตัวอักษร
+  Array.from(accountNames).sort().forEach(accountName => {
+    const option = document.createElement('option');
+    option.value = accountName;
+    option.textContent = accountName;
+    accountNameSelect.appendChild(option);
+  });
+}
+
+async function loadData() {
+  const { data, error } = await _supabase.from('ad_history').select('*');
+  if (error) {
+    console.error("โหลดข้อมูลไม่สำเร็จ:", error);
+    return alert("โหลดข้อมูลไม่สำเร็จ: " + error.message);
+  }
+  allData = data || [];
+  populateOwnerFilter(allData); // เรียกใช้เพื่อ populate owner filter
+  populateAccountNameFilter(allData); // เรียกใช้ฟังก์ชันใหม่ที่นี่
+  applyFilter(); // กรองข้อมูลและแสดงผลหลังจากโหลดเสร็จ
+}
+
 function applyFilter() {
   const selectedYear = parseInt(document.getElementById('yearSelect').value);
   const selectedMonths = [...document.querySelectorAll('#monthCheckboxes input:checked')].map(c => +c.value);
   const startDateInput = document.getElementById("startDate").value;
   const endDateInput = document.getElementById("endDate").value;
   const selectedOwner = document.getElementById('ownerSelect').value; // ดึงค่า owner ที่เลือก
+  const selectedAccountName = document.getElementById('accountNameSelect').value; // ดึงค่าชื่อบัญชีที่เลือก
 
   let filtered = allData.filter(d => {
     const dataDate = new Date(d.date);
@@ -210,6 +257,11 @@ function applyFilter() {
     // Filter by owner
     if (selectedOwner && d.owner !== selectedOwner) {
       return false; // Skip if owner doesn't match
+    }
+
+    // Filter by account name
+    if (selectedAccountName && d.account_name !== selectedAccountName) {
+        return false; // Skip if account name doesn't match
     }
 
     // Check custom date range if provided (Highest priority)
@@ -236,7 +288,7 @@ function applyFilter() {
             let cycleStartYear = selectedYear;
             let cycleEndYear = selectedYear;
             let cycleStartMonth = reportMonth - 1; // 0-indexed for Date object
-            let cycleEndMonth = reportMonth - 1;   // 0-indexed for Date object
+            let cycleEndMonth = reportMonth - 1;  // 0-indexed for Date object
 
             // Adjust start month/year for the 26th-25th cycle
             if (reportMonth === 1) { // If "January" (month 1), cycle starts Dec 26 of previous year
@@ -261,6 +313,7 @@ function applyFilter() {
 
   renderSummary(filtered);
   renderOwnerSummary(filtered);
+  // ส่ง 'filtered' data ไปยังฟังก์ชัน monthly และ daily ด้วย
   renderMonthly(filtered);
   renderDailySummary(filtered);
 }
@@ -270,6 +323,7 @@ function resetFilter() {
   document.getElementById('endDate').value = '';
   document.querySelectorAll('#monthCheckboxes input').forEach(c => c.checked = false);
   document.getElementById('ownerSelect').value = ''; // Reset owner filter
+  document.getElementById('accountNameSelect').value = ''; // รีเซ็ตชื่อบัญชีด้วย
   // Set current year as default
   document.getElementById('yearSelect').value = new Date().getFullYear();
   applyFilter();
@@ -291,7 +345,7 @@ function renderSummary(data) {
 
   document.getElementById('totalSpend').textContent = "฿" + totalSpend.toLocaleString(undefined, {minimumFractionDigits: 2});
   document.getElementById('totalPurchasesSummary').textContent = totalPurchases.toLocaleString();
-  document.getElementById('avgCostPerPurchaseSummary').textContent = "฿" + avgCostPerPurchase.toLocaleString(undefined, {minimumFractionDigits: 2});
+  document.getElementById('avgCostPerPurchaseSummary').textContent = "฿" + avgCostPerPurchase.toFixed(2);
   document.getElementById('totalRevenueSummary').textContent = "฿" + totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2});
   document.getElementById('totalRoas').textContent = totalRoas.toFixed(2);
 }
@@ -314,7 +368,7 @@ function renderOwnerSummary(data) {
 
     groupedByOwner[owner].totalSpend += +item.spend_total;
     groupedByOwner[owner].totalPurchases += +item.purchases;
-    groupedByOwner[owner].totalRevenue += +item.revenue; // แก้ไขชื่อตัวแปรที่พิมพ์ผิด (ownerTotalRevenue -> totalRevenue)
+    groupedByOwner[owner].totalRevenue += +item.revenue;
 
     // Use a unique key for each account based on name and ID
     const accountName = item.account_name || 'ไม่ระบุชื่อบัญชี';
@@ -413,8 +467,7 @@ function renderOwnerSummary(data) {
         <td>${account.account_name}</td>
         <td>${account.account_id}</td>
         <td class="text-money">฿${account.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-        <td>฿${accountAvgCostPerPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-        <td>${account.purchases.toLocaleString()}</td>
+        <td>฿${accountAvgCostPerPurchase.toFixed(2)}</td> <td>${account.purchases.toLocaleString()}</td>
         <td class="text-money">฿${account.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
         <td class="text-roas">${accountRoas.toFixed(2)}</td>
       `;
@@ -423,44 +476,32 @@ function renderOwnerSummary(data) {
   });
 }
 
-function renderMonthly(data) {
+function renderMonthly(data) { // รับ 'data' ที่ถูกกรองแล้ว
   const monthly = {};
   const selectedYear = parseInt(document.getElementById('yearSelect').value);
   const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
   // Initialize monthly object for all 12 "reporting months" based on 26-25 cycle
-  // This ensures all months are displayed even if no data exists for them
   for (let i = 1; i <= 12; i++) {
     monthly[i] = { spend: 0, purchases: 0, revenue: 0 };
   }
 
   // Group data by the 26-25 reporting month
-  data.forEach(e => {
+  data.forEach(e => { // ใช้ 'data' ที่ถูกกรองแล้ว
     const dataDate = new Date(e.date);
 
-    // Determine which "reporting month" (26th-25th cycle) the dataDate falls into
-    // The reporting month is the *calendar* month where the 25th falls.
-    // Example: A date between Dec 26, 2023 - Jan 25, 2024 is part of "January 2024" reporting month.
-    // Example: A date between Jan 26, 2024 - Feb 25, 2024 is part of "February 2024" reporting month.
-
-    let reportingMonthCalendarIndex = dataDate.getMonth(); // 0-11 for Date object
+    let reportingMonthCalendarIndex = dataDate.getMonth();
     let reportingYear = dataDate.getFullYear();
 
     if (dataDate.getDate() > 25) {
-        // If the day is after the 25th, it belongs to the *next* reporting month's cycle.
-        // E.g., Jan 26 belongs to Feb's reporting cycle (Jan 26 - Feb 25).
         reportingMonthCalendarIndex = (reportingMonthCalendarIndex + 1) % 12;
-        if (reportingMonthCalendarIndex === 0) { // If it wrapped from Dec (11) to Jan (0), increment the year
+        if (reportingMonthCalendarIndex === 0) {
             reportingYear += 1;
         }
     }
-    // Else (date.getDate() <= 25), it belongs to the *current* calendar month's reporting cycle.
-    // E.g., Jan 1-25 belongs to Jan's reporting cycle (Dec 26 - Jan 25).
 
-
-    // Only aggregate data for the selected filter year's reporting months
     if (reportingYear === selectedYear) {
-        const reportingMonthNumber = reportingMonthCalendarIndex + 1; // Convert to 1-12 for monthly object key
+        const reportingMonthNumber = reportingMonthCalendarIndex + 1;
         if (monthly[reportingMonthNumber]) {
             monthly[reportingMonthNumber].spend += +e.spend_total;
             monthly[reportingMonthNumber].purchases += +e.purchases;
@@ -486,13 +527,13 @@ function renderMonthly(data) {
   }
 }
 
-function renderDailySummary(data) {
+function renderDailySummary(data) { // รับ 'data' ที่ถูกกรองแล้ว
   const daily = {};
   const dailyTableBody = document.getElementById("dailyTableBody");
   dailyTableBody.innerHTML = ""; // Clear existing data
 
   // Group data by exact date
-  data.forEach(item => {
+  data.forEach(item => { // ใช้ 'data' ที่ถูกกรองแล้ว
     const date = new Date(item.date).toISOString().split('T')[0]; // Get date in YYYY-MM-DD format
     if (!daily[date]) {
       daily[date] = {
@@ -519,8 +560,7 @@ function renderDailySummary(data) {
       <td>${date}</td>
       <td class="text-money">฿${dailyData.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
       <td>${dailyData.purchases.toLocaleString()}</td>
-      <td>฿${avgCostPerPurchase.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-      <td class="text-money">฿${dailyData.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+      <td>฿${avgCostPerPurchase.toFixed(2)}</td> <td class="text-money">฿${dailyData.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
       <td class="text-roas">${roas.toFixed(2)}</td>
     `;
   });
