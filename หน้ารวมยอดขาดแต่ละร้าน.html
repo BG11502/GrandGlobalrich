@@ -221,7 +221,15 @@
             </div>
         </div>
     </div>
-
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const loggedInUser = localStorage.getItem('loggedInUser');
+      if (!loggedInUser) {
+        // ถ้าไม่มีข้อมูลผู้ใช้ใน localStorage ให้พาไปหน้า login.html
+        window.location.href = 'login.html';
+      }
+    });
+</script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const client = supabase.createClient(
@@ -637,5 +645,6 @@
             // loadProductJarHeader(); // ไม่ต้องเรียกตรงนี้แล้ว เพราะ loadData() จะเรียก renderProductJarTable()
         });
     </script>
+    
 </body>
 </html>
