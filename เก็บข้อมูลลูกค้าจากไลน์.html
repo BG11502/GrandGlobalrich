@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>ระบบแปลงข้อความเป็นรายการออเดอร์ + Supabase CRUD</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-light p-4">
+  <div class="container">
+    <h3 class="mb-4">📄 แปลงข้อความเป็นรายการออเดอร์ </h3>
+
+    <div class="mb-3">
+      <label for="inputText" class="form-label">วางข้อความออเดอร์ที่นี่</label>
+      <textarea id="inputText" class="form-control" rows="10" placeholder="วางข้อความ เช่น:
+134
+ชื่อ ลัดดาวัลย์ ศรีเสริม(aม)
+ที่อยู่ 46/2 ม.3 ต.รำพัน
+อ.ท่าใหม่ จ.จันทบุรี 22170
+โทร.0828924150
+
+S3 1
+COD
+เพจ ซาเบียน่า เพจแบรนด์ 
+FB Kikk Pluempak 
+*ซาเบียน่า 1แถม2 COD 199
+@USR80"></textarea>
+    </div>
+
+    <button class="btn btn-primary mb-4" onclick="convertText()">แปลงข้อความเป็นรายการ</button>
+    <button class="btn btn-info mb-3" onclick="exportToExcel()">📥 Export Excel</button>
+
+    <h5 class="text-success">📋 รายการออเดอร์</h5>
+    <form id="orderForm" class="row g-3 mb-4" onsubmit="event.preventDefault(); saveOrUpdateOrder();">
+      <input type="hidden" id="recordId" />
+
+      <div class="col-md-2">
+        <label class="form-label">ออเดอร์ที่ *</label>
+        <input type="text" class="form-control" id="orderId" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">ชื่อลูกค้า *</label>
+        <input type="text" class="form-control" id="customerName" required>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">เบอร์โทร1 *</label>
+        <input type="text" class="form-control" id="phone1" required>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">เบอร์โทร2</label>
+        <input type="text" class="form-control" id="phone2">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">ชื่อโซเชียล *</label>
+        <input type="text" class="form-control" id="socialName" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">การชำระเงิน *</label>
+        <input type="text" class="form-control" id="payment" required>
+      </div>
+
+      <div class="col-md-12">
+        <label class="form-label">ที่อยู่ *</label>
+        <input type="text" class="form-control" id="address" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">แขวง/ตำบล *</label>
+        <input type="text" class="form-control" id="subdistrict" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">เขต/อำเภอ *</label>
+        <input type="text" class="form-control" id="district" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">จังหวัด *</label>
+        <input type="text" class="form-control" id="province" required>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">รหัสไปรษณีย์ *</label>
+        <input type="text" class="form-control" id="zipcode" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">ประเทศ *</label>
+        <input type="text" class="form-control" id="country" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">ขนส่ง *</label>
+        <input type="text" class="form-control" id="shipping" required value="kerry">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">รหัสสินค้า (SKU) (จำนวน) *</label>
+        <input type="text" class="form-control" id="skuQty" required>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">ราคาสินค้า</label>
+        <input type="number" min="0" step="0.01" class="form-control" id="productPrice" value="0">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">ส่วนลดสินค้า</label>
+        <input type="number" min="0" step="0.01" class="form-control" id="productDiscount" value="0">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">ส่วนลดคำสั่งซื้อ</label>
+        <input type="number" min="0" step="0.01" class="form-control" id="orderDiscount" value="0">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">ค่าส่ง</label>
+        <input type="number" min="0" step="0.01" class="form-control" id="shippingFee" value="0">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">ค่าบริการเก็บเงินปลายทาง</label>
+        <input type="number" min="0" step="0.01" class="form-control" id="codFee" value="0">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">วันที่สั่งซื้อ</label>
+        <input type="date" class="form-control" id="orderDate" required>
+      </div>
+
+      <div class="col-md-12">
+        <label class="form-label">โน้ตบนใบปะหน้าพัสดุ</label>
+        <input type="text" class="form-control" id="note">
+      </div>
+
+      <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-success" id="saveBtn">✅ บันทึกข้อมูล</button>
+        <button type="button" class="btn btn-secondary" onclick="resetForm()">🧹 เคลียร์ฟอร์ม</button>
+      </div>
+    </form>
+
+    <hr />
+
+    <h5 class="mb-3">📑 รายการออเดอร์ที่บันทึกไว้</h5>
+    <input type="text" id="searchOrderId" class="form-control mb-3" placeholder="ค้นหา ออเดอร์ที่ (พิมพ์เลขออเดอร์)" oninput="filterOrders()" />
+
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped align-middle" id="ordersTable">
+        <thead class="table-dark">
+          <tr>
+            <th>ออเดอร์ที่</th>
+            <th>ชื่อลูกค้า</th>
+            <th>เบอร์โทร1</th>
+            <th>เบอร์โทร2</th>
+            <th>ชื่อโซเชียล</th>
+            <th>การชำระเงิน</th>
+            <th>ที่อยู่</th>
+            <th>แขวง/ตำบล</th>
+            <th>เขต/อำเภอ</th>
+            <th>จังหวัด</th>
+            <th>รหัสไปรษณีย์</th>
+            <th>ประเทศ</th>
+            <th>ขนส่ง</th>
+            <th>รหัสสินค้า (SKU) (จำนวน) *</th>
+            <th>ราคาสินค้า</th>
+            <th>ส่วนลดสินค้า</th>
+            <th>ส่วนลดคำสั่งซื้อ</th>
+            <th>ค่าส่ง</th>
+            <th>ค่าบริการเก็บเงินปลายทาง</th>
+            <th>วันที่สั่งซื้อ</th>
+            <th>โน้ต</th>
+            <th>แก้ไข</th>
+            <th>ลบ</th>
+          </tr>
+        </thead>
+        <tbody id="ordersTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  // กำหนดค่า Supabase
+  const SUPABASE_URL = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
+
+  // สร้าง client Supabase
+  supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function convertText() {
+    const text = document.getElementById('inputText').value;
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+
+    const getValue = (key, fallback = '') =>
+      lines.find(l => l.includes(key))?.replace(key, '').trim() || fallback;
+
+    // ออเดอร์ที่
+    document.getElementById('orderId').value = lines[0] || '';
+
+    // ชื่อลูกค้า
+    document.getElementById('customerName').value = getValue('ชื่อ');
+
+    // แก้ที่อยู่ให้ขึ้นแค่เลขบ้านกับหมู่ (ตัดตำบลออก)
+    const rawAddressLine = lines.find(l => l.startsWith('ที่อยู่')) || '';
+    let addressOnly = rawAddressLine.replace('ที่อยู่', '').trim();
+    const ตIndex = addressOnly.indexOf('ต.');
+    if (ตIndex !== -1) {
+      addressOnly = addressOnly.substring(0, ตIndex).trim();
+    }
+    document.getElementById('address').value = addressOnly;
+
+    const rawText = lines.join(' ');
+
+    // ดึงแขวง/ตำบล, เขต/อำเภอ, จังหวัด
+    const subdistrictMatch = rawText.match(/ต\.\s*([^\s]+)/);
+    const districtMatch = rawText.match(/อ\.\s*([^\s]+)/);
+    const provinceMatch = rawText.match(/จ\.\s*([^\s]+)/);
+
+    document.getElementById('subdistrict').value = subdistrictMatch?.[1] || '';
+    document.getElementById('district').value = districtMatch?.[1] || '';
+    document.getElementById('province').value = provinceMatch?.[1] || '';
+
+    // รหัสไปรษณีย์ 5 หลัก
+    document.getElementById('zipcode').value = rawText.match(/\d{5}/)?.[0] || '';
+
+    // เบอร์โทร1 (เช่น โทร.0828924150)
+    document.getElementById('phone1').value = rawText.match(/โทร\.*\s*(\d{9,10})/)?.[1] || '';
+
+    // เบอร์โทร2 ให้เว้นว่างไว้ (กรอกเอง)
+    document.getElementById('phone2').value = '';
+    
+    // SKU + จำนวน (บรรทัดที่ขึ้นต้นด้วย S)
+    document.getElementById('skuQty').value = lines.find(l => /^S/i.test(l)) || '';
+
+    // การชำระเงิน เช่น COD หรือ โอน
+    const paymentLine = lines.find(l => /^COD$|^โอน$/i.test(l)) || '';
+    document.getElementById('payment').value = paymentLine || '';
+
+    // ราคาสินค้า จาก COD หรือ โอน ตามหลังด้วยจำนวนเงิน เช่น "COD 199"
+    const codPriceMatch = rawText.match(/COD\s*(\d+(\.\d+)?)/i);
+    const transferPriceMatch = rawText.match(/โอน\s*(\d+(\.\d+)?)/i);
+
+    document.getElementById('productPrice').value =
+      codPriceMatch ? codPriceMatch[1] :
+      transferPriceMatch ? transferPriceMatch[1] :
+      '';
+
+    // หาบรรทัดชื่อโซเชียลที่ขึ้นต้นด้วย FB เท่านั้น
+    const socialLine = lines.find(l => /^FB\s+/i.test(l));
+    document.getElementById('socialName').value = socialLine ? socialLine.trim() : '';
+
+    // ตั้งค่าฟิลด์อื่น ๆ เริ่มต้น
+    document.getElementById('productDiscount').value = 0;
+    document.getElementById('orderDiscount').value = 0;
+    document.getElementById('shippingFee').value = 0;
+    document.getElementById('codFee').value = 0;
+    document.getElementById('shipping').value = 'kerry'; // กำหนดขนส่งเป็น kerry ไว้ก่อน
+    document.getElementById('country').value = 'ประเทศไทย';
+    document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('note').value = '';
+  }
+
+  // ฟังก์ชันบันทึกหรืออัปเดตข้อมูล
+  async function saveOrUpdateOrder() {
+    const recordId = document.getElementById('recordId').value;
+    const order = {
+      order_id: document.getElementById('orderId').value,
+      customer_name: document.getElementById('customerName').value,
+      phone1: document.getElementById('phone1').value,
+      phone2: document.getElementById('phone2').value,
+      social_name: document.getElementById('socialName').value,
+      payment: document.getElementById('payment').value,
+      address: document.getElementById('address').value,
+      subdistrict: document.getElementById('subdistrict').value,
+      district: document.getElementById('district').value,
+      province: document.getElementById('province').value,
+      zipcode: document.getElementById('zipcode').value,
+      country: document.getElementById('country').value,
+      shipping: document.getElementById('shipping').value,
+      sku_qty: document.getElementById('skuQty').value,
+      product_price: parseFloat(document.getElementById('productPrice').value) || 0,
+      product_discount: parseFloat(document.getElementById('productDiscount').value) || 0,
+      order_discount: parseFloat(document.getElementById('orderDiscount').value) || 0,
+      shipping_fee: parseFloat(document.getElementById('shippingFee').value) || 0,
+      cod_fee: parseFloat(document.getElementById('codFee').value) || 0,
+      order_date: document.getElementById('orderDate').value,
+      note: document.getElementById('note').value,
+    };
+
+    if (!order.order_id) {
+      alert('กรุณาใส่เลขออเดอร์');
+      return;
+    }
+
+    if (recordId) {
+      // อัปเดตข้อมูล
+      const { data, error } = await supabase
+        .from('orders')
+        .update(order)
+        .eq('id', recordId);
+
+      if (error) {
+        alert('เกิดข้อผิดพลาดในการอัปเดต: ' + error.message);
+        console.error(error);
+      } else {
+        alert('อัปเดตข้อมูลสำเร็จ');
+        resetForm();
+        loadOrders();
+      }
+    } else {
+      // แทรกข้อมูลใหม่
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([order]);
+
+      if (error) {
+        alert('เกิดข้อผิดพลาดในการบันทึก: ' + error.message);
+        console.error(error);
+      } else {
+        alert('บันทึกข้อมูลสำเร็จ');
+        resetForm();
+        loadOrders();
+      }
+    }
+  }
+
+  // โหลดข้อมูลรายการทั้งหมด
+  async function loadOrders() {
+    const { data, error } = await supabase
+      .from('orders')
+      .select()
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
+      console.error(error);
+      return;
+    }
+
+    const tbody = document.getElementById('ordersTbody');
+    tbody.innerHTML = '';
+
+    data.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.order_id || ''}</td>
+        <td>${item.customer_name || ''}</td>
+        <td>${item.phone1 || ''}</td>
+        <td>${item.phone2 || ''}</td>
+        <td>${item.social_name || ''}</td>
+        <td>${item.payment || ''}</td>
+        <td>${item.address || ''}</td>
+        <td>${item.subdistrict || ''}</td>
+        <td>${item.district || ''}</td>
+        <td>${item.province || ''}</td>
+        <td>${item.zipcode || ''}</td>
+        <td>${item.country || ''}</td>
+        <td>${item.shipping || ''}</td>
+        <td>${item.sku_qty || ''}</td>
+        <td>${item.product_price ?? 0}</td>
+        <td>${item.product_discount ?? 0}</td>
+        <td>${item.order_discount ?? 0}</td>
+        <td>${item.shipping_fee ?? 0}</td>
+        <td>${item.cod_fee ?? 0}</td>
+        <td>${item.order_date || ''}</td>
+        <td>${item.note || ''}</td>
+        <td><button class="btn btn-sm btn-warning" onclick="editOrder('${item.id}')">แก้ไข</button></td>
+        <td><button class="btn btn-sm btn-danger" onclick="deleteOrder('${item.id}')">ลบ</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ฟังก์ชันแก้ไขข้อมูล
+  async function editOrder(id) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select()
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      alert('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + error.message);
+      return;
+    }
+
+    const order = data;
+    document.getElementById('recordId').value = order.id;
+    document.getElementById('orderId').value = order.order_id || '';
+    document.getElementById('customerName').value = order.customer_name || '';
+    document.getElementById('phone1').value = order.phone1 || '';
+    document.getElementById('phone2').value = order.phone2 || '';
+    document.getElementById('socialName').value = order.social_name || '';
+    document.getElementById('payment').value = order.payment || '';
+    document.getElementById('address').value = order.address || '';
+    document.getElementById('subdistrict').value = order.subdistrict || '';
+    document.getElementById('district').value = order.district || '';
+    document.getElementById('province').value = order.province || '';
+    document.getElementById('zipcode').value = order.zipcode || '';
+    document.getElementById('country').value = order.country || '';
+    document.getElementById('shipping').value = order.shipping || '';
+    document.getElementById('skuQty').value = order.sku_qty || '';
+    document.getElementById('productPrice').value = order.product_price ?? 0;
+    document.getElementById('productDiscount').value = order.product_discount ?? 0;
+    document.getElementById('orderDiscount').value = order.order_discount ?? 0;
+    document.getElementById('shippingFee').value = order.shipping_fee ?? 0;
+    document.getElementById('codFee').value = order.cod_fee ?? 0;
+    document.getElementById('orderDate').value = order.order_date || '';
+    document.getElementById('note').value = order.note || '';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ฟังก์ชันลบข้อมูล
+  async function deleteOrder(id) {
+    if (!confirm('ต้องการลบข้อมูลรายการนี้หรือไม่?')) return;
+
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('เกิดข้อผิดพลาดในการลบ: ' + error.message);
+      return;
+    }
+
+    alert('ลบข้อมูลสำเร็จ');
+    loadOrders();
+  }
+
+  // ฟังก์ชันเคลียร์ฟอร์ม
+  function resetForm() {
+    document.getElementById('orderForm').reset();
+    document.getElementById('recordId').value = '';
+    document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+  }
+
+  // ฟังก์ชันกรองค้นหาออเดอร์โดยเลขออเดอร์ที่
+  async function filterOrders() {
+    const filter = document.getElementById('searchOrderId').value.trim().toLowerCase();
+
+    if (!filter) {
+      loadOrders();
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select()
+      .ilike('order_id', `%${filter}%`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      alert('เกิดข้อผิดพลาดในการค้นหา: ' + error.message);
+      return;
+    }
+
+    const tbody = document.getElementById('ordersTbody');
+    tbody.innerHTML = '';
+
+    data.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.order_id || ''}</td>
+        <td>${item.customer_name || ''}</td>
+        <td>${item.phone1 || ''}</td>
+        <td>${item.phone2 || ''}</td>
+        <td>${item.social_name || ''}</td>
+        <td>${item.payment || ''}</td>
+        <td>${item.address || ''}</td>
+        <td>${item.subdistrict || ''}</td>
+        <td>${item.district || ''}</td>
+        <td>${item.province || ''}</td>
+        <td>${item.zipcode || ''}</td>
+        <td>${item.country || ''}</td>
+        <td>${item.shipping || ''}</td>
+        <td>${item.sku_qty || ''}</td>
+        <td>${item.product_price ?? 0}</td>
+        <td>${item.product_discount ?? 0}</td>
+        <td>${item.order_discount ?? 0}</td>
+        <td>${item.shipping_fee ?? 0}</td>
+        <td>${item.cod_fee ?? 0}</td>
+        <td>${item.order_date || ''}</td>
+        <td>${item.note || ''}</td>
+        <td><button class="btn btn-sm btn-warning" onclick="editOrder('${item.id}')">แก้ไข</button></td>
+        <td><button class="btn btn-sm btn-danger" onclick="deleteOrder('${item.id}')">ลบ</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ฟังก์ชัน Export Excel ไฟล์
+  function exportToExcel() {
+    const headers = [
+      'ออเดอร์ที่', 'ชื่อลูกค้า', 'เบอร์โทร1', 'เบอร์โทร2', 'ชื่อโซเชียล', 'การชำระเงิน',
+      'ที่อยู่', 'แขวง/ตำบล', 'เขต/อำเภอ', 'จังหวัด', 'รหัสไปรษณีย์', 'ประเทศ', 'ขนส่ง',
+      'รหัสสินค้า (SKU) (จำนวน) ', 'ราคาสินค้า', 'ส่วนลดสินค้า', 'ส่วนลดคำสั่งซื้อ', 'ค่าส่ง', 'ค่าบริการเก็บเงินปลายทาง',
+      'วันที่สั่งซื้อ', 'โน้ต'
+    ];
+
+    const tbody = document.getElementById('ordersTbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    const data = rows.map(tr => {
+      const cells = tr.querySelectorAll('td');
+      return Array.from(cells).slice(0, headers.length).map(td => td.textContent.trim());
+    });
+
+    // สร้าง workbook และ worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+
+    XLSX.writeFile(wb, 'orders_export.xlsx');
+  }
+
+  // โหลดข้อมูลอัตโนมัติเมื่อเปิดหน้า
+  window.onload = () => {
+    resetForm();
+    loadOrders();
+  };
+</script>
+</body>
+</html>
