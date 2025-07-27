@@ -4,7 +4,7 @@
 <head>
 
     <meta charset="UTF-8">
-    <title>📊 รายงานสรุปยอดจาก Excel (กรองข้อมูลได้)</title>
+    <title>📊 รายงานสรุปยอดจาก Excel</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -14,16 +14,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        .error-log {
-            font-family: monospace;
-            white-space: pre-wrap;
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            padding: 10px;
-            border-radius: 5px;
-        }
-
         /* Custom style to ensure buttons are at the very top and span width */
         .top-nav-buttons {
             padding: 1rem 0;
@@ -37,15 +27,20 @@
         /* Added style for the new navigation buttons */
         .nav-buttons-container {
             display: flex;
-            justify-content: space-between; /* Puts space between items */
+            justify-content: space-between;
+            /* Puts space between items */
             align-items: center;
-            padding-bottom: 1rem; /* Space below these buttons */
-            margin-bottom: 1rem; /* Space before the main title */
-            border-bottom: 1px solid #eee; /* Optional: separator line */
+            padding-bottom: 1rem;
+            /* Space below these buttons */
+            margin-bottom: 1rem;
+            /* Space before the main title */
+            border-bottom: 1px solid #eee;
+            /* Optional: separator line */
         }
 
         .nav-buttons-container .btn {
-            min-width: 150px; /* Ensure buttons have a consistent minimum width */
+            min-width: 150px;
+            /* Ensure buttons have a consistent minimum width */
             text-align: center;
         }
     </style>
@@ -56,19 +51,23 @@
     <div class="container my-5">
         <div class="nav-buttons-container">
             <a href="index.html" class="btn btn-outline-info">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle" viewBox="0 0 16 16">
-                    <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                    class="bi bi-arrow-left-circle" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                        d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z" />
                 </svg>
                 กลับหน้าหลัก
             </a>
             <a href="หน้าสรุปยอดตีกลับ.html" class="btn btn-outline-primary">
                 หน้าสรุปยอดตีกลับ
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right-circle" viewBox="0 0 16 16">
-                    <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0M11.354 8.354a.5.5 0 0 0 0-.708L8.646 5.146a.5.5 0 1 0-.708.708L10.293 8l-2.355 2.354a.5.5 0 0 0 .708.708z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                    class="bi bi-arrow-right-circle" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                        d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0M11.354 8.354a.5.5 0 0 0 0-.708L8.646 5.146a.5.5 0 1 0-.708.708L10.293 8l-2.355 2.354a.5.5 0 0 0 .708.708z" />
                 </svg>
             </a>
         </div>
-        <h2 class="mb-4">📊 รายงานสรุปยอดจาก Excel (กรองข้อมูลได้)</h2>
+        <h2 class="mb-4">📊 รายงานสรุปยอดจาก Excel</h2>
 
         <div class="mb-3">
             <label for="merchantId" class="form-label">รหัสร้านค้า (Merchant ID):</label>
@@ -85,19 +84,6 @@
                 <span class="visually-hidden">กำลังโหลด...</span>
             </div>
             <strong>กำลังประมวลผลไฟล์...</strong> โปรดรอสักครู่
-        </div>
-
-        <div id="parsingErrors" class="alert alert-warning" style="display: none;">
-            <strong>⚠️ พบข้อผิดพลาดในการแปลงวันที่/ข้อมูล:</strong>
-            <p id="errorSummary" class="mb-2"></p>
-            <button class="btn btn-sm btn-outline-warning" type="button" data-bs-toggle="collapse"
-                data-bs-target="#errorDetails" aria-expanded="false" aria-controls="errorDetails">
-                แสดงรายละเอียดข้อผิดพลาด
-            </button>
-            <div class="collapse" id="errorDetails">
-                <pre id="errorLog" class="error-log mt-2"
-                    style="max-height: 250px; overflow-y: auto;"></pre>
-            </div>
         </div>
 
         <hr>
@@ -119,13 +105,46 @@
                     <path fill-rule="evenodd"
                         d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
                     <path
-                        d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 3.109-3.502s4.552-1.242 2.68-1.53zM3.781 4.5C2.608 4.5 1.625 5.326 1.625 6.315c0 .539.213 1.028.569 1.454zm8.354 1.479c-.876-.415-1.89-.74-2.923-.74-1.954 0-3.658.99-4.653 2.11A4.5 4.5 0 0 0 3.78 12.375h8.906c1.808 0 3.25-1.366 3.25-3.182 0-1.58-.949-2.529-2.194-2.772z" />
+                        d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 3.109-3.502s4.552-1.242 2.68-1.53zM3.781 4.5C2.608 4.5 1.625 5.326 1.625 6.315c0 .539.213 1.028.569 1.454zm8.354 1.479c-.876-.415-1.89-.74-2.923-.74-1.954 0-3.658.99-4.653 2.11A4.5 4.5 0 0 0 3.78 12.375h8.906c1.808 0 3.25-1.366 3.25-3.182 0-1.58-.949-2.529-2.194-2.772z"/>
                 </svg>
-                บันทึกข้อมูลดิบเข้า Supabase
+                บันทึกข้อมูลสรุปเข้า Supabase
             </button>
         </div>
 
-    
+        <div class="card mb-4 p-3" id="monthYearSelectionCard" style="display: none;">
+            <h5 class="card-title mb-3">🗓️ กำหนดเดือน/ปีสำหรับข้อมูลในไฟล์นี้ (เพื่อบันทึกเข้า Supabase)</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="selectUserYear" class="form-label">ปี:</label>
+                    <select class="form-select" id="selectUserYear">
+                        <option value="">เลือกปี</option>
+                        </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="selectUserMonth" class="form-label">เดือน:</label>
+                    <select class="form-select" id="selectUserMonth">
+                        <option value="">เลือกเดือน</option>
+                        <option value="1">มกราคม</option>
+                        <option value="2">กุมภาพันธ์</option>
+                        <option value="3">มีนาคม</option>
+                        <option value="4">เมษายน</option>
+                        <option value="5">พฤษภาคม</option>
+                        <option value="6">มิถุนายน</option>
+                        <option value="7">กรกฎาคม</option>
+                        <option value="8">สิงหาคม</option>
+                        <option value="9">กันยายน</option>
+                        <option value="10">ตุลาคม</option>
+                        <option value="11">พฤศจิกายน</option>
+                        <option value="12">ธันวาคม</option>
+                    </select>
+                </div>
+            </div>
+            <small class="text-muted mt-2">
+                *ข้อมูลทั้งหมดในไฟล์ Excel ที่อัปโหลดนี้จะถูกบันทึกเป็นของเดือน/ปีที่คุณกำหนดไว้ด้านบน
+            </small>
+        </div>
+
+
         <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
             <h4 class="text-success mb-0">📈 สรุปยอดรวมทั้งหมด</h4>
         </div>
@@ -148,34 +167,14 @@
             </div>
         </div>
 
-        
 
         <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
-            <h4 class="text-primary mb-0">🔍 สรุปยอด SKU รายวัน (รายละเอียด)</h4>
+            <h4 class="text-primary mb-0">🔍 สรุปยอด SKU (รายละเอียด)</h4>
             <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
                 data-bs-target="#skuDetailCollapse" aria-expanded="true" aria-controls="skuDetailCollapse"
                 id="toggleSkuDetailTableBtn">
                 ซ่อนตาราง
             </button>
-        </div>
-
-        <div class="card mb-3">
-            <div class="card-header bg-light">
-                <div class="row align-items-center">
-                    <div class="col-md-auto">
-                        <label for="filterDate" class="form-label mb-0">กรองข้อมูลตามวันที่:</label>
-                    </div>
-                    <div class="col-md-4">
-                        <input type="date" class="form-control" id="filterDate">
-                    </div>
-                    <div class="col-md-auto">
-                        <button id="applyFilterBtn" class="btn btn-outline-primary">กรองข้อมูล</button>
-                    </div>
-                    <div class="col-md-auto">
-                        <button id="clearFilterBtn" class="btn btn-outline-secondary">ล้างการกรอง</button>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div class="collapse show" id="skuDetailCollapse">
@@ -185,7 +184,6 @@
                         <table class="table table-bordered table-hover mb-0">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>วันที่ (DD/MM/YYYY)</th>
                                     <th>Seller SKU</th>
                                     <th>Quantity รวม</th>
                                     <th>ยอดขายรวม (บาท)</th>
@@ -193,7 +191,7 @@
                             </thead>
                             <tbody id="skuSummaryTable">
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">กรุณาเลือกไฟล์ Excel เพื่อเริ่มต้น...
+                                    <td colspan="3" class="text-center text-muted">กรุณาเลือกไฟล์ Excel เพื่อเริ่มต้น...
                                     </td>
                                 </tr>
                             </tbody>
@@ -208,88 +206,30 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // ตัวแปร Global สำหรับเก็บข้อมูลที่ประมวลผลแล้ว (ยังคงใช้สำหรับแสดงผลบนหน้าเว็บ)
         let globalSKUSummaryMap = {};
-        // ตัวแปรสำหรับเก็บข้อมูลดิบที่ประมวลผลแล้ว (สำหรับบันทึกลง Supabase)
-        let processedRawData = [];
+        let rawDataForSupabase = []; // Raw data per row (now without date parsing from Excel)
 
-        // --- การตั้งค่า Supabase ---
-        // โปรดแทนที่ 'YOUR_SUPABASE_PROJECT_URL' และ 'YOUR_SUPABASE_ANON_KEY' ด้วยข้อมูลโปรเจกต์ของคุณ
         const SUPABASE_URL = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
-        supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // ✅ แก้ไขการประกาศตัวแปร
-        // --- สิ้นสุดการตั้งค่า Supabase ---
+        supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ฟังก์ชันช่วยในการแปลงรูปแบบวันที่ที่ยืดหยุ่นจาก Excel
-        function parseFlexibleDate(raw) {
-            if (raw === undefined || raw === null || raw === '') return null;
-
-            // ลองแปลงเป็นตัวเลขวันที่ของ Excel (เช่น 44383 สำหรับ 2021-07-06)
-            if (typeof raw === "number") {
-                const dateObj = XLSX.SSF.parse_date_code(raw);
-                if (dateObj) {
-                    // XLSX.SSF.parse_date_code คืนค่า year, month, day, hour, minute, second
-                    // เดือนใน XLSX.SSF เป็น 1-indexed, แต่ Date constructor ต้องการ 0-indexed
-                    const d = new Date(dateObj.y, dateObj.m - 1, dateObj.d, dateObj.H || 0, dateObj.M || 0, dateObj.S || 0);
-                    if (!isNaN(d.getTime())) return d;
-                }
+        // Populate year dropdown on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectYear = document.getElementById('selectUserYear');
+            const currentYear = new Date().getFullYear();
+            for (let i = currentYear - 5; i <= currentYear + 1; i++) { // From 5 years ago to next year
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `ปี ${i}`;
+                selectYear.appendChild(option);
             }
+            selectYear.value = currentYear; // Set current year as default
+            
+            // Set current month as default (Optional)
+            const selectMonth = document.getElementById('selectUserMonth');
+            selectMonth.value = (new Date().getMonth() + 1).toString();
+        });
 
-            // ลองแปลงเป็นสตริง
-            if (typeof raw === "string") {
-                raw = raw.trim();
-
-                // Regex สำหรับ DD/MM/YYYY [HH:MM:SS] หรือ DD-MM-YYYY [HH:MM:SS]
-                const regexDMY = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/;
-                let mDMY = raw.match(regexDMY);
-                if (mDMY) {
-                    // ข้อควรจำ: ลำดับคือ วัน, เดือน, ปี ดังนั้นเราต้องจัดเรียงใหม่สำหรับ Date constructor (YYYY-MM-DD)
-                    const [_, day, month, year, hour, min, sec] = mDMY;
-                    const dateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                    const timeString = hour ? `T${hour.padStart(2, '0')}:${min.padStart(2, '0')}:${(sec || '00').padStart(2, '0')}` : '';
-                    const d = new Date(`${dateString}${timeString}`);
-                    if (!isNaN(d.getTime())) return d;
-                }
-
-                // ลองแปลงเป็นรูปแบบ ISO-like YYYY-MM-DD [HH:MM:SS] หรือคล้ายกัน
-                // ซึ่งจะครอบคลุมรูปแบบมาตรฐานที่ JavaScript Date.parse() รู้จัก
-                const d = new Date(raw);
-                if (!isNaN(d.getTime())) return d;
-            }
-            return null;
-        }
-
-        // ฟังก์ชันแปลงวันที่เป็น DD/MM/YYYY สำหรับแสดงผล
-        function formatDateToDDMMYYYY(date) {
-            if (!date) return '';
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
-        }
-
-        // ฟังก์ชันแปลงวันที่เป็น YYYY-MM-DD สำหรับบันทึกลงฐานข้อมูล
-        function formatDateToYYYYMMDD(date) {
-            if (!date) return null;
-            const year = date.getFullYear();
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        // ฟังก์ชันสำหรับกำหนด "ปีธุรกิจ" และ "เดือนธุรกิจ" (วันที่ 26 ถึง 25 ของเดือนถัดไป)
-        function getBusinessYearMonth(date) {
-            const day = date.getDate();
-            if (day >= 26) {
-                const nextMonthDate = new Date(date);
-                nextMonthDate.setMonth(date.getMonth() + 1);
-                return { year: nextMonthDate.getFullYear(), month: nextMonthDate.getMonth() + 1 };
-            } else {
-                return { year: date.getFullYear(), month: date.getMonth() + 1 };
-            }
-        }
-
-        // Event Listener สำหรับการเลือกไฟล์ Excel
         document.getElementById('excelFile').addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (!file) {
@@ -298,17 +238,17 @@
             }
 
             document.getElementById('processingStatus').style.display = 'block';
-            document.getElementById('parsingErrors').style.display = 'none';
             document.getElementById('downloadSummaryBtn').style.display = 'none';
             document.getElementById('saveToSupabaseBtn').style.display = 'none';
+            document.getElementById('monthYearSelectionCard').style.display = 'none'; // Hide selection until loaded
             resetTables('กำลังอ่านไฟล์...');
-            updateOverallTotals(0, 0); // Clear overall totals
+            updateOverallTotals(0, 0);
 
             const sheetName = "OrderSKUList";
             const sellerSkuCol = "Seller SKU";
             const quantityCol = "Quantity";
             const orderAmountCol = "Order Amount";
-            const cancelledTimeCol = "Cancelled Time";
+            // const cancelledTimeCol = "Cancelled Time"; // Removed as it's not used for date parsing now
 
             const reader = new FileReader();
             reader.onload = function (event) {
@@ -326,142 +266,93 @@
 
                 const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
-                // ล้างข้อมูลเก่าสำหรับ global map และข้อมูลดิบ
                 globalSKUSummaryMap = {};
-                processedRawData = [];
-
-                const rowsNotParsed = [];
-                let totalRowsProcessed = 0;
+                rawDataForSupabase = [];
 
                 json.forEach((row, index) => {
-                    totalRowsProcessed++;
                     const sku = row[sellerSkuCol]?.toString().trim();
                     const qty = parseInt(row[quantityCol]) || 0;
                     const amount = parseFloat(row[orderAmountCol]) || 0;
-                    const rawCancelledTime = row[cancelledTimeCol];
+                    // const rawCancelledTime = row[cancelledTimeCol]; // Still good to capture original string if desired, but not for parsing
 
                     if (!sku) {
-                        rowsNotParsed.push(`แถวที่ ${index + 2} (ใน Excel): คอลัมน์ '${sellerSkuCol}' ว่างเปล่า (Cancelled Time: "${rawCancelledTime}")`);
-                        return;
+                        return; // Skip rows with no Seller SKU
                     }
 
-                    const dateObj = parseFlexibleDate(rawCancelledTime);
-
-                    if (!dateObj) {
-                        rowsNotParsed.push(`แถวที่ ${index + 2} (ใน Excel): ไม่สามารถแปลงวันที่ได้จาก "${rawCancelledTime}" (จากคอลัมน์ '${cancelledTimeCol}', Seller SKU: "${sku}", Type: ${typeof rawCancelledTime})`);
-                        return;
-                    }
-
-                    const dateOnlyFormattedDDMMYYYY = formatDateToDDMMYYYY(dateObj);
-                    const dateOnlyFormattedYYYYMMDD = formatDateToYYYYMMDD(dateObj);
-                    const calendarYear = dateObj.getFullYear();
-                    const { year: businessYear, month: businessMonth } = getBusinessYearMonth(dateObj);
-
-                    // **เก็บข้อมูลแต่ละแถวที่ประมวลผลแล้วลงใน processedRawData**
-                    // ตรวจสอบให้แน่ใจว่าชื่อ key ตรงกับชื่อคอลัมน์ในตาราง 'cancelled_order_records' ใน Supabase
-                    processedRawData.push({
-                        cancelled_date: dateOnlyFormattedYYYYMMDD,
+                    // No date parsing from Excel needed for this logic
+                    rawDataForSupabase.push({
+                        // We no longer get cancelled_date, business_year, business_month from Excel
                         seller_sku: sku,
                         quantity: qty,
                         order_amount: amount,
-                        original_cancelled_time_string: rawCancelledTime ? rawCancelledTime.toString() : null,
-                        cancelled_year: calendarYear, // เพิ่มปีปฏิทินสำหรับข้อมูลดิบ
-                        cancelled_month: dateObj.getMonth() + 1, // เพิ่มเดือนปฏิทินสำหรับข้อมูลดิบ
-                        business_year: businessYear, // เพิ่มปีธุรกิจสำหรับข้อมูลดิบ
-                        business_month: businessMonth // เพิ่มเดือนธุรกิจสำหรับข้อมูลดิบ
+                        // original_cancelled_time_string: rawCancelledTime ? rawCancelledTime.toString() : null, // Optional: keep if you want to store original string
                     });
 
-                    // --- ส่วนสรุปยอดสำหรับแสดงผลบนหน้าเว็บ (สำหรับ SKU Detail Summary) ---
-                    const skuKey = `${dateOnlyFormattedDDMMYYYY}||${sku}`;
-                    if (!globalSKUSummaryMap[skuKey]) {
-                        globalSKUSummaryMap[skuKey] = {
-                            date_display: dateOnlyFormattedDDMMYYYY,
-                            date_db: dateOnlyFormattedYYYYMMDD,
+                    // Aggregate for display summary (still SKU only)
+                    if (!globalSKUSummaryMap[sku]) {
+                        globalSKUSummaryMap[sku] = {
                             sku,
                             totalQty: 0,
                             totalAmount: 0
                         };
                     }
-                    globalSKUSummaryMap[skuKey].totalQty += qty;
-                    globalSKUSummaryMap[skuKey].totalAmount += amount;
-                    // --- สิ้นสุดส่วนสรุปยอดสำหรับแสดงผลบนหน้าเว็บ ---
+                    globalSKUSummaryMap[sku].totalQty += qty;
+                    globalSKUSummaryMap[sku].totalAmount += amount;
                 });
 
-                renderSKUSummary(globalSKUSummaryMap);
-                updateOverallTotalsBasedOnProcessedData();
-
+                renderSKUSummary();
+                updateOverallTotalsBasedOnProcessedData(); // Use globalSKUSummaryMap for overall totals
 
                 document.getElementById('processingStatus').style.display = 'none';
                 document.getElementById('downloadSummaryBtn').style.display = 'inline-block';
                 document.getElementById('saveToSupabaseBtn').style.display = 'inline-block';
-
-                if (rowsNotParsed.length > 0) {
-                    document.getElementById('parsingErrors').style.display = 'block';
-                    document.getElementById('errorSummary').innerText = `พบ ${rowsNotParsed.length} แถวจากทั้งหมด ${totalRowsProcessed} แถวที่มีปัญหาในการแปลงข้อมูล (โปรดตรวจสอบคอลัมน์ 'Cancelled Time' หรือ 'Seller SKU' ในไฟล์ Excel)`;
-                    document.getElementById('errorLog').innerText = rowsNotParsed.join("\n");
-                } else {
-                    document.getElementById('parsingErrors').style.display = 'none';
-                }
+                document.getElementById('monthYearSelectionCard').style.display = 'block'; // Show month/year selection
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // ฟังก์ชันสำหรับอัปเดตยอดรวมทั้งหมด
         function updateOverallTotals(totalQty, totalAmount) {
             document.getElementById('totalQtyOverall').innerText = totalQty.toLocaleString();
             document.getElementById('totalAmountOverall').innerText = totalAmount.toFixed(2).toLocaleString();
         }
 
-        // ฟังก์ชันสำหรับคำนวณและอัปเดตยอดรวมทั้งหมดจาก processedRawData
         function updateOverallTotalsBasedOnProcessedData() {
             let overallTotalQty = 0;
             let overallTotalAmount = 0;
 
-            processedRawData.forEach(item => {
-                overallTotalQty += item.quantity;
-                overallTotalAmount += item.order_amount;
+            Object.values(globalSKUSummaryMap).forEach(item => {
+                overallTotalQty += item.totalQty;
+                overallTotalAmount += item.totalAmount;
             });
             updateOverallTotals(overallTotalQty, overallTotalAmount);
         }
 
-
-        // ฟังก์ชันรีเซ็ตตารางทั้งหมด
         function resetTables(message = 'กรุณาเลือกไฟล์ Excel เพื่อเริ่มต้น...') {
-            document.getElementById('skuSummaryTable').innerHTML = `<tr><td colspan="4" class="text-center text-muted">${message}</td></tr>`;
-            // ล้างข้อมูล Global
+            document.getElementById('skuSummaryTable').innerHTML = `<tr><td colspan="3" class="text-center text-muted">${message}</td></tr>`;
             globalSKUSummaryMap = {};
-            processedRawData = [];
+            rawDataForSupabase = []; // Clear Supabase data
             document.getElementById('downloadSummaryBtn').style.display = 'none';
             document.getElementById('saveToSupabaseBtn').style.display = 'none';
-            document.getElementById('filterDate').value = '';
-            updateOverallTotals(0, 0); // Reset overall totals on table reset
+            document.getElementById('monthYearSelectionCard').style.display = 'none'; // Hide month/year selection
+            updateOverallTotals(0, 0);
         }
 
-        // ฟังก์ชันแสดงผลสรุป SKU (รองรับการกรองตามวันที่)
-        function renderSKUSummary(dataMap, filterDate = null) {
+        function renderSKUSummary() {
             const tbody = document.getElementById('skuSummaryTable');
             tbody.innerHTML = '';
 
-            let filteredData = Object.values(dataMap);
-
-            if (filterDate) {
-                filteredData = filteredData.filter(item => item.date_display === filterDate);
-            }
+            let filteredData = Object.values(globalSKUSummaryMap);
 
             const sorted = filteredData.sort((a, b) => {
-                const dateA = new Date(a.date_db);
-                const dateB = new Date(b.date_db);
-                if (dateA - dateB !== 0) return dateA - dateB;
                 return a.sku.localeCompare(b.sku);
             });
 
             if (sorted.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">ไม่พบข้อมูล SKU ที่สามารถประมวลผลได้ หรือไม่พบข้อมูลสำหรับวันที่เลือก</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">ไม่พบข้อมูล SKU ที่สามารถประมวลผลได้</td></tr>';
             } else {
                 sorted.forEach(item => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${item.date_display}</td>
                         <td>${item.sku}</td>
                         <td>${item.totalQty}</td>
                         <td>${item.totalAmount.toFixed(2)}</td>
@@ -471,40 +362,16 @@
             }
         }
 
-        // Event Listener สำหรับปุ่ม "กรองข้อมูล"
-        document.getElementById('applyFilterBtn').addEventListener('click', function () {
-            const filterDateInput = document.getElementById('filterDate').value;
-            if (filterDateInput) {
-                const [year, month, day] = filterDateInput.split('-');
-                const formattedFilterDate = `${day}/${month}/${year}`;
-                renderSKUSummary(globalSKUSummaryMap, formattedFilterDate);
-            } else {
-                alert('กรุณาเลือกวันที่ที่ต้องการกรอง');
-            }
-        });
-
-        // Event Listener สำหรับปุ่ม "ล้างการกรอง"
-        document.getElementById('clearFilterBtn').addEventListener('click', function () {
-            document.getElementById('filterDate').value = '';
-            renderSKUSummary(globalSKUSummaryMap);
-        });
-
-        // ดาวน์โหลดสรุปเป็น Excel (ตอนนี้จะดาวน์โหลดเฉพาะ SKU Detail Summary)
         document.getElementById('downloadSummaryBtn').addEventListener('click', function () {
             const wb = XLSX.utils.book_new();
 
-            // 1. ชีทสรุปรายละเอียด SKU
             const allSKUDataForExport = Object.values(globalSKUSummaryMap).sort((a, b) => {
-                const dateA = new Date(a.date_db);
-                const dateB = new Date(b.date_db);
-                if (dateA - dateB !== 0) return dateA - dateB;
                 return a.sku.localeCompare(b.sku);
-            }).map(item => [item.date_display, item.sku, item.totalQty, item.totalAmount.toFixed(2)]);
+            }).map(item => [item.sku, item.totalQty, item.totalAmount.toFixed(2)]);
 
-            const skuHeader = ['วันที่', 'Seller SKU', 'Quantity รวม', 'ยอดขายรวม (บาท)'];
+            const skuHeader = ['Seller SKU', 'Quantity รวม', 'ยอดขายรวม (บาท)'];
 
             if (allSKUDataForExport.length > 0) {
-                // Calculate totals for export
                 let exportTotalQuantity = 0;
                 let exportTotalSalesAmount = 0;
                 Object.values(globalSKUSummaryMap).forEach(item => {
@@ -515,26 +382,31 @@
                 const dataWithTotals = [
                     skuHeader,
                     ...allSKUDataForExport,
-                    ['', 'ยอดรวมทั้งหมด:', exportTotalQuantity, exportTotalSalesAmount.toFixed(2)] // Total row for export
+                    ['ยอดรวมทั้งหมด:', exportTotalQuantity, exportTotalSalesAmount.toFixed(2)]
                 ];
 
                 const wsSKU = XLSX.utils.aoa_to_sheet(dataWithTotals);
-                XLSX.utils.book_append_sheet(wb, wsSKU, "SKU_Detail_Summary");
+                XLSX.utils.book_append_sheet(wb, wsSKU, "SKU_Summary");
             } else {
                 alert("ไม่มีข้อมูล SKU ที่จะดาวน์โหลด โปรดตรวจสอบว่ามีการประมวลผลไฟล์สำเร็จแล้ว");
                 return;
             }
 
-            // ดาวน์โหลดไฟล์ Excel สุดท้าย
             XLSX.writeFile(wb, "SKU_Summary_Report_" + new Date().toLocaleDateString('en-CA') + ".xlsx");
         });
 
-        // --- ฟังก์ชันบันทึกข้อมูลไปยัง Supabase ---
         document.getElementById('saveToSupabaseBtn').addEventListener('click', async function () {
             const merchantId = document.getElementById('merchantId').value.trim();
+            const selectedYear = parseInt(document.getElementById('selectUserYear').value);
+            const selectedMonth = parseInt(document.getElementById('selectUserMonth').value);
 
             if (!merchantId) {
                 alert('กรุณากรอกรหัสร้านค้า (Merchant ID) ก่อนบันทึกข้อมูล');
+                return;
+            }
+
+            if (isNaN(selectedYear) || isNaN(selectedMonth)) {
+                alert('กรุณาเลือกปีและเดือนที่ต้องการบันทึกให้ถูกต้อง');
                 return;
             }
 
@@ -543,51 +415,55 @@
                 return;
             }
 
-            if (processedRawData.length === 0) {
-                alert('ไม่มีข้อมูลดิบจาก Excel ที่ประมวลผลแล้วให้บันทึก');
+            if (Object.keys(globalSKUSummaryMap).length === 0) {
+                alert('ไม่มีข้อมูล SKU ที่ประมวลผลแล้วให้บันทึก');
                 return;
             }
 
-            // Add merchant_id to each item in processedRawData
-            const dataToInsert = processedRawData.map(item => ({
-                ...item,
-                merchant_id: merchantId // Add the merchant ID here
+            // Prepare summarized data for Supabase
+            const dataToInsert = Object.values(globalSKUSummaryMap).map(item => ({
+                merchant_id: merchantId,
+                seller_sku: item.sku,
+                total_quantity: item.totalQty, // Renamed column for clarity in summary table
+                total_order_amount: item.totalAmount, // Renamed column for clarity in summary table
+                summary_year: selectedYear, // New column for user-defined year
+                summary_month: selectedMonth // New column for user-defined month
             }));
 
-            this.disabled = true; // ปิดใช้งานปุ่มระหว่างบันทึก
-            this.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> กำลังบันทึกข้อมูลดิบ...`; // แสดงสถานะโหลดบนปุ่ม
+            this.disabled = true;
+            this.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> กำลังบันทึกข้อมูลสรุป...`;
 
             try {
-                // ✅ บันทึกข้อมูลดิบลงตาราง 'cancelled_order_records'
-                // เราใช้ 'insert' ซึ่งจะเพิ่มแถวใหม่ทุกครั้ง
+                // Supabase recommends inserting in batches for large datasets.
+                // You might need to adjust the table name here to 'monthly_sku_summary'
                 const { data, error } = await supabase
-                    .from('cancelled_order_records') // ✅ ตรวจสอบชื่อตารางให้แน่ใจว่าตรงกับใน Supabase
-                    .insert(dataToInsert); // Use dataToInsert which includes merchant_id
+                    .from('monthly_sku_summary') // *** เปลี่ยนชื่อตารางตรงนี้ ***
+                    .upsert(dataToInsert, { onConflict: ['merchant_id', 'seller_sku', 'summary_year', 'summary_month'] });
+                    // Using upsert: If a record with the same merchant_id, seller_sku, summary_year, and summary_month exists, it will be updated. Otherwise, a new record will be inserted.
 
                 if (error) {
-                    console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูลดิบไปยัง Supabase:', error);
-                    alert(`เกิดข้อผิดพลาดในการบันทึกข้อมูลดิบลง Supabase: ${error.message}. โปรดตรวจสอบ Console สำหรับรายละเอียด.`);
+                    console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูลสรุปไปยัง Supabase:', error);
+                    alert(`เกิดข้อผิดพลาดในการบันทึกข้อมูลสรุปเข้า Supabase: ${error.message}. โปรดตรวจสอบ Console สำหรับรายละเอียด.`);
                 } else {
-                    alert(`บันทึกข้อมูลดิบ ${dataToInsert.length} รายการ (Merchant ID: ${merchantId}) ลง Supabase สำเร็จ!`);
-                    console.log('ข้อมูลที่บันทึก:', data);
+                    alert(`บันทึกข้อมูลสรุป ${dataToInsert.length} รายการ (Merchant ID: ${merchantId}, เดือน: ${selectedMonth}/${selectedYear}) ลง Supabase สำเร็จ!`);
+                    console.log('ข้อมูลสรุปที่บันทึก:', data);
                 }
 
             } catch (error) {
-                console.error('เกิดข้อผิดพลาดทั่วไปในการบันทึกข้อมูลดิบ:', error);
-                alert(`เกิดข้อผิดพลาดที่ไม่คาดคิดในการบันทึกข้อมูลดิบ: ${error.message}. โปรดตรวจสอบ Console.`);
+                console.error('เกิดข้อผิดพลาดทั่วไปในการบันทึกข้อมูลสรุป:', error);
+                alert(`เกิดข้อผิดพลาดที่ไม่คาดคิดในการบันทึกข้อมูลสรุป: ${error.message}. โปรดตรวจสอบ Console.`);
             } finally {
-                this.disabled = false; // เปิดใช้งานปุ่มอีกครั้ง
+                this.disabled = false;
                 this.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cloud-arrow-up" viewBox="0 0 16 16">
                         <path fill-rule="evenodd" d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z"/>
                         <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 3.109-3.502s4.552-1.242 2.68-1.53zM3.781 4.5C2.608 4.5 1.625 5.326 1.625 6.315c0 .539.213 1.028.569 1.454zm8.354 1.479c-.876-.415-1.89-.74-2.923-.74-1.954 0-3.658.99-4.653 2.11A4.5 4.5 0 0 0 3.78 12.375h8.906c1.808 0 3.25-1.366 3.25-3.182 0-1.58-.949-2.529-2.194-2.772z"/>
                     </svg>
-                    บันทึกข้อมูลดิบเข้า Supabase
-                `; // คืนข้อความและไอคอนเดิม
+                    บันทึกข้อมูลสรุปเข้า Supabase
+                `;
             }
         });
 
-        // Event Listener สำหรับการสลับซ่อน/แสดงตาราง SKU Detail
         const skuDetailCollapseElement = document.getElementById('skuDetailCollapse');
         const toggleSkuDetailTableBtn = document.getElementById('toggleSkuDetailTableBtn');
 
