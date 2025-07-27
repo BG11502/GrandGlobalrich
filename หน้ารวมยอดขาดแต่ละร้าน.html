@@ -4,104 +4,222 @@
     <meta charset="UTF-8" />
     <title>รายงานยอดขายแต่ละร้าน</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
-            background-color: #f8f9fa;
+            background-color: #f0f2f5; /* สีพื้นหลังที่ดูสบายตาขึ้น */
             font-family: 'Inter', sans-serif; /* ใช้ Font Inter */
+            color: #333;
+        }
+        .container {
+            max-width: 1300px; /* เพิ่มความกว้างสูงสุดของ container */
         }
         .summary-card {
             min-width: 200px;
-            border-radius: 12px; /* มุมโค้งมน */
+            border-radius: 15px; /* มุมโค้งมนมากขึ้น */
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08); /* เพิ่มเงาให้โดดเด่นขึ้น */
+            transition: transform 0.2s ease-in-out; /* เพิ่ม animation เล็กน้อย */
+            height: 100%; /* ทำให้ card สูงเท่ากัน */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .table-summary th, .table-summary td {
-            text-align: right;
+        .summary-card:hover {
+            transform: translateY(-5px); /* เลื่อนขึ้นเล็กน้อยเมื่อ hover */
         }
-        .table-summary th:first-child, .table-summary td:first-child {
-            text-align: center;
+        .summary-card .card-body {
+            padding: 1.5rem;
         }
         .filter-box {
-            border: 1px solid #ddd;
-            border-radius: 12px; /* มุมโค้งมน */
-            padding: 20px;
+            border: none; /* ลบ border ออก */
+            border-radius: 15px; /* มุมโค้งมน */
+            padding: 30px; /* เพิ่ม padding */
             background: #fff;
-            box-shadow: 0 0 10px rgba(0,0,0,0.03);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08); /* เงาเดียวกันกับ Card */
+        }
+        .form-label {
+            font-weight: 600; /* ทำให้ label ดูเข้มขึ้น */
+            color: #555;
+            margin-bottom: 0.5rem;
+        }
+        .form-select, .form-control {
+            border-radius: 10px; /* มุมโค้งมนสำหรับ input/select */
+            border-color: #ced4da; /* สีขอบ input */
         }
         .month-checkboxes label {
-            margin-right: 12px;
+            margin-right: 15px; /* เพิ่มระยะห่างระหว่าง checkbox */
         }
         .card {
-            border-radius: 12px; /* มุมโค้งมน */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* เพิ่มเงาเล็กน้อย */
+            border-radius: 15px; /* มุมโค้งมน */
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08); /* เพิ่มเงา */
+            border: none; /* ลบ border ของ card */
+        }
+        .card-header {
+            background-color: #f8f9fa; /* สีพื้นหลัง header ของ card */
+            border-bottom: 1px solid #e9ecef; /* เส้นแบ่งเบาๆ */
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            color: #333;
+            border-radius: 15px 15px 0 0 !important; /* มุมโค้งมนเฉพาะด้านบน */
+        }
+        .card-body {
+            padding: 1.5rem;
         }
         .btn {
-            border-radius: 8px; /* มุมโค้งมนสำหรับปุ่ม */
+            border-radius: 10px; /* มุมโค้งมนสำหรับปุ่ม */
+            padding: 0.6rem 1.2rem;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #218838;
+        }
+        .btn-outline-danger {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-outline-danger:hover {
+            background-color: #dc3545;
+            color: #fff;
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .table th, .table td {
+            padding: 0.9rem; /* เพิ่ม padding ในตาราง */
+            vertical-align: middle;
+        }
+        .table thead th {
+            border-bottom: 2px solid #dee2e6; /* เส้นใต้ header ตาราง */
+            font-weight: 600;
+            color: #495057;
+        }
+        .table tbody tr:last-child td {
+            border-bottom: none; /* ไม่มีเส้นใต้ที่แถวสุดท้าย */
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(0,0,0,.02); /* สีแถบสลับที่ดูซอฟต์ลง */
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(0,0,0,.05); /* สี hover ที่ดูนุ่มนวลขึ้น */
         }
         .modal-content {
-            border-radius: 12px; /* มุมโค้งมนสำหรับ Modal */
+            border-radius: 15px; /* มุมโค้งมนสำหรับ Modal */
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .modal-header {
+            border-bottom: none;
+            padding: 1.5rem;
+        }
+        .modal-footer {
+            border-top: none;
+            padding: 1rem 1.5rem;
+        }
+        .text-primary {
+            color: #007bff !important; /* สีฟ้า Bootstrap primary */
+        }
+        .text-success {
+            color: #28a745 !important;
+        }
+        .text-danger {
+            color: #dc3545 !important;
+        }
+        .fw-bold {
+            font-weight: 700 !important;
+        }
+        /* Custom styling for specific headers */
+        .card-header.bg-success {
+            background-color: #28a745 !important;
+            border-radius: 15px 15px 0 0 !important;
+        }
+        .table-primary thead {
+            background-color: #e0f2ff; /* สีฟ้าอ่อนสำหรับ header ตาราง SKU */
+        }
+        .table-success thead {
+            background-color: #d4edda; /* สีเขียวอ่อนสำหรับ header ตารางกระปุก */
         }
     </style>
 </head>
 <body class="p-4">
     <div class="container my-3">
         <div class="d-flex justify-content-end gap-2">
-            <button class="btn btn-outline-secondary" onclick="history.back()">⬅️ ย้อนกลับ</button>
-            <a href="index.html" class="btn btn-primary">🏠 หน้าหลัก</a>
+            <button class="btn btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> ย้อนกลับ</button>
+            <a href="index.html" class="btn btn-primary"><i class="bi bi-house-door-fill"></i> หน้าหลัก</a>
         </div>
     </div>
 
     <div class="container">
         <h3 class="mb-4 fw-bold text-primary">รายงานยอดขายแต่ละร้าน</h3>
 
-        <div class="filter-box mb-4">
-            <div class="row g-3">
-                <div class="col-md-2">
-                    <label class="form-label fw-bold">เลือกปี</label>
-                    <select id="yearSelect" class="form-select rounded-md"></select>
+        <div class="filter-box mb-5">
+            <div class="row g-4 align-items-end"> 
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label">เลือกปี</label>
+                    <select id="yearSelect" class="form-select"></select>
                 </div>
 
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">เลือกเดือน (ตามระบบ)</label>
-                    <div class="d-flex flex-wrap gap-2" id="monthCheckboxes"></div>
+                <div class="col-md-9 col-lg-6">
+                    <label class="form-label">เลือกเดือน (ตามระบบ)</label>
+                    <div class="d-flex flex-wrap gap-3" id="monthCheckboxes"></div> 
                 </div>
 
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">เลือกช่วงวันที่</label>
-                    <div class="d-flex">
-                        <input type="date" id="startDate" class="form-control me-2 rounded-md">
-                        <input type="date" id="endDate" class="form-control rounded-md">
+                <div class="col-md-6 col-lg-4">
+                    <label class="form-label">เลือกช่วงวันที่</label>
+                    <div class="d-flex gap-2"> 
+                        <input type="date" id="startDate" class="form-control">
+                        <input type="date" id="endDate" class="form-control">
                     </div>
                 </div>
 
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">เลือกร้าน</label>
-                    <select id="shopFilter" class="form-select rounded-md">
-                        <option value="">ทั้งหมด</option>
+                <div class="col-md-6 col-lg-4">
+                    <label class="form-label">เลือกร้าน</label>
+                    <select id="shopFilter" class="form-select" multiple size="8"> <option value="">ทั้งหมด</option>
                     </select>
                 </div>
 
-                <div class="col-md-8 d-flex align-items-end justify-content-start gap-2">
-                    <button class="btn btn-success rounded-md" onclick="loadData()">✅ ยืนยันการกรอง</button>
-                    <button class="btn btn-outline-danger rounded-md" onclick="resetFilter()">❌ ล้างการกรอง</button>
+                <div class="col-md-12 col-lg-8 d-flex align-items-end justify-content-start gap-3"> 
+                    <button class="btn btn-success" onclick="loadData()"><i class="bi bi-check-circle-fill"></i> ยืนยันการกรอง</button>
+                    <button class="btn btn-outline-danger" onclick="resetFilter()"><i class="bi bi-x-circle-fill"></i> ล้างการกรอง</button>
                 </div>
             </div>
         </div>
 
-        <div class="row mb-4" id="summaryCards"></div>
-        <div id="shopTableContainer"></div>
+        <div class="row mb-5 g-4" id="summaryCards"></div> 
+        <div class="card mb-5">
+            <div class="card-header fw-bold">
+                <i class="bi bi-shop me-2"></i> สรุปยอดขายรวมแต่ละร้านค้า
+            </div>
+            <div class="card-body table-responsive" id="shopTableContainer">
+            </div>
+        </div>
 
         <div class="card mt-5">
             <div class="card-header fw-bold d-flex justify-content-between align-items-center">
-                <span>📅 รายละเอียดยอดขายรายเดือน</span>
-                <button class="btn btn-sm btn-outline-secondary rounded-md" onclick="toggleVisibility('monthlySummaryBody', 'toggleMonthlySummaryIcon')">
+                <span><i class="bi bi-calendar-check me-2"></i> รายละเอียดยอดขายรายเดือน</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleVisibility('monthlySummaryBody', 'toggleMonthlySummaryIcon')">
                     <i id="toggleMonthlySummaryIcon" class="bi bi-eye-slash-fill"></i>
                 </button>
             </div>
             <div class="card-body table-responsive d-none" id="monthlySummaryBody">
-                <table class="table table-bordered text-end align-middle">
+                <table class="table table-bordered table-hover text-end align-middle table-striped">
                     <thead class="table-light text-center">
                         <tr>
                             <th>เดือน</th>
@@ -132,26 +250,26 @@
         <div class="card p-4 mt-5">
             <div class="card-header fw-bold d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-box-seam me-2"></i> รายละเอียด SKU รายวัน</span>
-                <button class="btn btn-sm btn-outline-secondary rounded-md" onclick="toggleVisibility('skuTableBodyContainer', 'toggleSkuTableIcon')">
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleVisibility('skuTableBodyContainer', 'toggleSkuTableIcon')">
                     <i id="toggleSkuTableIcon" class="bi bi-eye-slash-fill"></i>
                 </button>
             </div>
             <div class="card-body d-none" id="skuTableBodyContainer">
-                <div class="row mb-3">
+                <div class="row mb-3 align-items-center">
                     <div class="col-md-6">
-                        <input type="text" class="form-control rounded-md" id="searchSKU" placeholder="🔍 ค้นหา SKU" oninput="loadData()" />
+                        <input type="text" class="form-control" id="searchSKU" placeholder="🔍 ค้นหา SKU" oninput="loadData()" />
                     </div>
-                    <div class="col-md-6 text-end">
-                        <select id="sortOption" class="form-select w-auto d-inline rounded-md" onchange="loadData()">
+                    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                        <select id="sortOption" class="form-select w-auto d-inline" onchange="loadData()">
                             <option value="">🔃 เรียงตาม...</option>
                             <option value="qty">จำนวนขายมาก → น้อย</option>
                             <option value="amt">ยอดขายมาก → น้อย</option>
                         </select>
-                        <button class="btn btn-info ms-2 rounded-md" onclick="analyzeSKUSales()">✨ วิเคราะห์ยอดขาย SKU</button>
+                        <button class="btn btn-info ms-2" onclick="analyzeSKUSales()"><i class="bi bi-robot"></i> วิเคราะห์ยอดขาย SKU</button>
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-bordered text-center align-middle">
+                    <table class="table table-bordered table-hover text-center align-middle table-striped">
                         <thead class="table-primary">
                             <tr>
                                 <th>SKU</th>
@@ -159,7 +277,7 @@
                                 <th>จำนวนยอดยกเลิก</th>
                                 <th>ยอดขายรวม</th>
                                 <th>ยอดยกเลิก</th>
-                                <th>ยอดเงินคงเหลือ</th> <!-- เพิ่มคอลัมน์ใหม่ -->
+                                <th>ยอดเงินคงเหลือ</th>
                             </tr>
                         </thead>
                         <tbody id="skuTableBody"></tbody>
@@ -170,7 +288,7 @@
                                 <td id="sumSkuReturn">0</td>
                                 <td id="sumSkuAmount">0.00</td>
                                 <td id="sumSkuRefund">0.00</td>
-                                <td id="sumSkuRemainingAmount">0.00</td> <!-- เพิ่มสรุปยอดใหม่ -->
+                                <td id="sumSkuRemainingAmount">0.00</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -178,18 +296,15 @@
             </div>
         </div>
 
-        <!-- ตารางยอดกระปุก ที่ถูกย้ายเข้ามาใน body อย่างถูกต้อง -->
         <div class="card mt-5">
             <div class="card-header bg-success text-white fw-bold">
-                🟢 ยอดกระปุก
+                <i class="bi bi-boxes me-2"></i> ยอดกระปุกรวม (ตามสินค้า)
             </div>
             <div class="card-body table-responsive">
                 <table class="table table-bordered text-center align-middle table-striped">
                     <thead class="table-success" id="productJarTableHead">
-                        <!-- เนื้อหาส่วนหัวตารางจะถูกสร้างด้วย JavaScript ตรงนี้ -->
                     </thead>
                     <tbody id="productJarTableBody">
-                        <!-- ข้อมูลตัวเลขในตารางนี้จะถูกสร้างด้วย JavaScript -->
                     </tbody>
                 </table>
             </div>
@@ -197,12 +312,11 @@
 
     </div>
 
-    <!-- Modal สำหรับแสดงผลลัพธ์จาก AI -->
     <div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="aiAnalysisModalLabel">✨ ผลการวิเคราะห์ยอดขาย SKU ด้วย AI</h5>
+                    <h5 class="modal-title" id="aiAnalysisModalLabel"><i class="bi bi-stars"></i> ผลการวิเคราะห์ยอดขาย SKU ด้วย AI</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -216,22 +330,22 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary rounded-md" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
                 </div>
             </div>
         </div>
     </div>
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const loggedInUser = localStorage.getItem('loggedInUser');
-      if (!loggedInUser) {
-        // ถ้าไม่มีข้อมูลผู้ใช้ใน localStorage ให้พาไปหน้า login.html
-        window.location.href = 'login.html';
-      }
-    });
-</script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const loggedInUser = localStorage.getItem('loggedInUser');
+            if (!loggedInUser) {
+                // ถ้าไม่มีข้อมูลผู้ใช้ใน localStorage ให้พาไปหน้า login.html
+                window.location.href = 'login.html';
+            }
+        });
+
         const client = supabase.createClient(
             "https://vzxttbvwukpsxqdaulvo.supabase.co",
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U"
@@ -264,7 +378,7 @@
 
         // Populate month checkboxes
         monthCheckboxes.innerHTML = monthNames.map((m, i) => `
-            <div class='form-check me-2'>
+            <div class='form-check'>
                 <input class='form-check-input month-check' type='checkbox' value='${i + 1}' id='m${i}'>
                 <label class='form-check-label' for='m${i}'>${m}</label>
             </div>`).join("");
@@ -272,12 +386,27 @@
         function getSelectedMonths() {
             return Array.from(document.querySelectorAll(".month-check:checked")).map(el => parseInt(el.value));
         }
+        
+        // --- NEW FUNCTION: Get selected shops from multiple select ---
+        function getSelectedShops() {
+            const selectedOptions = Array.from(shopFilter.selectedOptions);
+            // ถ้ามี "ทั้งหมด" ถูกเลือก หรือไม่มีการเลือกอะไรเลย ให้ถือว่าเลือกทั้งหมด
+            if (selectedOptions.some(option => option.value === "") || selectedOptions.length === 0) {
+                return []; // คืนค่าเป็น array ว่าง เพื่อให้ query ไม่กรอง shop_name
+            }
+            return selectedOptions.map(option => option.value);
+        }
+        // --- END NEW FUNCTION ---
 
         function resetFilter() {
             document.querySelectorAll(".month-check").forEach(el => el.checked = false);
             startDateInput.value = "";
             endDateInput.value = "";
-            shopFilter.value = "";
+            // --- MODIFIED: Clear all selections for multiple shop select ---
+            Array.from(shopFilter.options).forEach(option => {
+                option.selected = false;
+            });
+            // --- END MODIFIED ---
             searchSKUInput.value = "";
             sortOptionSelect.value = "";
             loadData();
@@ -329,7 +458,7 @@
         async function loadData() {
             const selectedYear = parseInt(yearSelect.value);
             const selectedMonths = getSelectedMonths();
-            const selectedShop = shopFilter.value;
+            const selectedShops = getSelectedShops(); // --- MODIFIED: Use new function ---
 
             let startDate, endDate;
 
@@ -353,9 +482,11 @@
                 .gte("date", dayjs(startDate).format("YYYY-MM-DD"))
                 .lte("date", dayjs(endDate).format("YYYY-MM-DD"));
 
-            if (selectedShop) {
-                query = query.eq("shop_name", selectedShop);
+            // --- MODIFIED: Use .in() for multiple shop selection ---
+            if (selectedShops.length > 0) {
+                query = query.in("shop_name", selectedShops);
             }
+            // --- END MODIFIED ---
 
             const { data, error } = await query; // data is sku_history entries
 
@@ -374,7 +505,13 @@
 
         function renderShopList(data) {
             const uniqueShops = Array.from(new Set(data.map(d => d.shop_name).filter(Boolean)));
-            shopFilter.innerHTML = `<option value="">ทั้งหมด</option>` + uniqueShops.map(shop => `<option value="${shop}">${shop}</option>`).join("");
+            // Keep existing selections if any
+            const currentSelectedValues = getSelectedShops(); 
+
+            shopFilter.innerHTML = `<option value="">ทั้งหมด</option>` + uniqueShops.map(shop => {
+                const isSelected = currentSelectedValues.includes(shop) ? 'selected' : '';
+                return `<option value="${shop}" ${isSelected}>${shop}</option>`;
+            }).join("");
         }
 
         function renderTable(data) {
@@ -406,42 +543,54 @@
             const remainingAmount = totalAmt - totalRef;
 
             document.getElementById("summaryCards").innerHTML = `
-                <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+                <div class="col-md-4 col-lg-2"><div class="card summary-card text-center"><div class="card-body">
                     <h6 class="card-title text-muted">จำนวนการสั่งซื้อ</h6>
                     <h5 class="fw-bold">${formatNumber(totalQty)}</h5></div></div></div>
-                <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+                <div class="col-md-4 col-lg-2"><div class="card summary-card text-center"><div class="card-body">
                     <h6 class="card-title text-muted">จำนวนยอดยกเลิก</h6>
                     <h5 class="text-danger fw-bold">${formatNumber(totalRet)}</h5></div></div></div>
-                <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+                <div class="col-md-4 col-lg-2"><div class="card summary-card text-center"><div class="card-body">
                     <h6 class="card-title text-muted">ออเดอร์คงเหลือ</h6>
                     <h5 class="fw-bold">${formatNumber(remainingOrders)}</h5></div></div></div>
-                <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+                <div class="col-md-4 col-lg-2"><div class="card summary-card text-center"><div class="card-body">
                     <h6 class="card-title text-muted">ยอดขายรวม</h6>
-                    <h5 class="text-success fw-bold">฿${formatNumber(totalAmt)}</h5></div></div></div>    
-                <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+                    <h5 class="text-success fw-bold">฿${formatNumber(totalAmt)}</h5></div></div></div>
+                <div class="col-md-4 col-lg-2"><div class="card summary-card text-center"><div class="card-body">
                     <h6 class="card-title text-muted">ยอดยกเลิก</h6>
                     <h5 class="text-danger fw-bold">฿${formatNumber(totalRef)}</h5></div></div></div>
-                <div class="col-md-3"><div class="card shadow-sm summary-card text-center"><div class="card-body">
+                <div class="col-md-4 col-lg-2"><div class="card summary-card text-center"><div class="card-body">
                     <h6 class="card-title text-muted">ยอดเงินคงเหลือ</h6>
                     <h5 class="fw-bold">฿${formatNumber(remainingAmount)}</h5></div></div></div>
             `;
 
-            let html = `<div class="table-responsive mt-3"><table class="table table-bordered table-hover bg-white">
+            let html = `<table class="table table-bordered table-hover bg-white table-striped">
                 <thead class="table-light text-center">
-                    <tr><th>ร้านค้า</th><th>ยอดขายรวม</th><th>จำนวนการสั่งซื้อ</th><th>จำนวนยอดยกเลิก</th><th>ยอดยกเลิก</th></tr>
+                    <tr>
+                        <th>ร้านค้า</th>
+                        <th>ยอดขายรวม</th>
+                        <th>จำนวนการสั่งซื้อ</th>
+                        <th>จำนวนยอดยกเลิก</th>
+                        <th>ยอดยกเลิก</th>
+                        <th>ออเดอร์คงเหลือ</th>
+                        <th>ยอดเงินคงเหลือ</th>
+                    </tr>
                 </thead><tbody>`;
 
             Object.entries(summaryByShop).forEach(([shop, s]) => {
+                const shopRemainingOrders = s.qty - s.ret;
+                const shopRemainingAmount = s.amt - s.ref;
                 html += `<tr>
                     <td>${shop}</td>
                     <td class="text-end text-success">฿${formatNumber(s.amt)}</td>
                     <td class="text-end">${formatNumber(s.qty)}</td>
                     <td class="text-end text-danger">${formatNumber(s.ret)}</td>
                     <td class="text-end text-danger">฿${formatNumber(s.ref)}</td>
+                    <td class="text-end">${formatNumber(shopRemainingOrders)}</td>
+                    <td class="text-end">฿${formatNumber(shopRemainingAmount)}</td>
                 </tr>`;
             });
 
-            html += `</tbody></table></div>`;
+            html += `</tbody></table>`;
             document.getElementById("shopTableContainer").innerHTML = html;
         }
 
@@ -531,6 +680,8 @@
                 skuEntries.sort((a, b) => b[1].amt - a[1].amt);
             }
 
+            currentSKUDataForAnalysis = Object.fromEntries(skuEntries); // เก็บข้อมูล SKU ที่ถูกกรองและเรียงลำดับแล้ว
+
             let sumSkuQty = 0, sumSkuRet = 0, sumSkuAmt = 0, sumSkuRef = 0, sumSkuRemainingAmount = 0; // เพิ่ม sumSkuRemainingAmount
 
             skuEntries.forEach(([sku, s]) => {
@@ -542,7 +693,7 @@
                         <td>${formatNumber(s.ret)}</td>
                         <td>฿${formatNumber(s.amt)}</td>
                         <td>฿${formatNumber(s.ref)}</td>
-                        <td>฿${formatNumber(remainingAmount)}</td> <!-- แสดง remainingAmount -->
+                        <td>฿${formatNumber(remainingAmount)}</td>
                     </tr>
                 `;
                 sumSkuQty += s.qty;
@@ -570,13 +721,13 @@
             if (productNamesError) {
                 console.error('Error loading product names for Jar Table:', productNamesError.message);
                 productJarTableHead.innerHTML = `<tr><th>ไม่สามารถโหลดข้อมูลสินค้าได้</th></tr>`;
-                productJarTableBody.innerHTML = `<tr><td>เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`; // แสดงข้อผิดพลาดใน body ด้วย
+                productJarTableBody.innerHTML = `<tr><td colspan="1" class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`; // แสดงข้อผิดพลาดใน body ด้วย
                 return;
             }
 
             if (!productNamesData || productNamesData.length === 0) {
                 productJarTableHead.innerHTML = `<tr><th>ไม่พบข้อมูลสินค้า</th></tr>`;
-                productJarTableBody.innerHTML = `<tr><td>ไม่พบข้อมูลยอดกระปุก</td></tr>`;
+                productJarTableBody.innerHTML = `<tr><td colspan="1">ไม่พบข้อมูลยอดกระปุก</td></tr>`;
                 return;
             }
 
@@ -639,12 +790,62 @@
             productJarTableBody.innerHTML = rowHtml; // อัปเดต tbody
         }
 
+        // Function for AI Analysis (Placeholder for actual AI integration)
+        async function analyzeSKUSales() {
+            aiAnalysisContent.innerHTML = `
+                <p class="text-center text-muted">กำลังวิเคราะห์ข้อมูล...</p>
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            aiAnalysisModal.show();
+
+            // Simulate API call to an AI service
+            setTimeout(async () => {
+                try {
+                    const topSellingSKUs = Object.entries(currentSKUDataForAnalysis)
+                        .sort((a, b) => b[1].amt - a[1].amt)
+                        .slice(0, 5) // Get top 5 SKUs by amount
+                        .map(([name, data]) => `${name} (ยอดขาย ฿${formatNumber(data.amt)}, จำนวน ${formatNumber(data.qty)} ชิ้น)`);
+
+                    const lowestSellingSKUs = Object.entries(currentSKUDataForAnalysis)
+                        .sort((a, b) => a[1].amt - b[1].amt)
+                        .filter(([name, data]) => data.amt > 0) // Filter out SKUs with 0 sales
+                        .slice(0, 5) // Get lowest 5 SKUs by amount
+                        .map(([name, data]) => `${name} (ยอดขาย ฿${formatNumber(data.amt)}, จำนวน ${formatNumber(data.qty)} ชิ้น)`);
+
+                    const analysisText = `
+                        <h5>ภาพรวมการวิเคราะห์:</h5>
+                        <p>ข้อมูลยอดขาย SKU ที่ถูกกรองและเรียงลำดับในปัจจุบัน แสดงให้เห็นแนวโน้มที่น่าสนใจดังนี้:</p>
+                        <ul>
+                            <li><strong>SKU ยอดนิยม 5 อันดับแรก (ตามยอดขาย):</strong>
+                                <ul>
+                                    ${topSellingSKUs.length > 0 ? topSellingSKUs.map(sku => `<li>${sku}</li>`).join('') : '<li>ไม่พบข้อมูล SKU ยอดนิยม</li>'}
+                                </ul>
+                            </li>
+                            <li><strong>SKU ที่มียอดขายน้อย 5 อันดับแรก (มากกว่า 0):</strong>
+                                <ul>
+                                    ${lowestSellingSKUs.length > 0 ? lowestSellingSKUs.map(sku => `<li>${sku}</li>`).join('') : '<li>ไม่พบข้อมูล SKU ที่มียอดขายน้อย</li>'}
+                                </ul>
+                            </li>
+                        </ul>
+                        <p class="text-muted"><em>คำแนะนำ:</em> การวิเคราะห์นี้เป็นเพียงข้อมูลเบื้องต้น คุณสามารถนำข้อมูลเหล่านี้ไปพิจารณาเพื่อปรับกลยุทธ์การตลาด, การจัดสต็อกสินค้า หรือการส่งเสริมการขายได้</p>
+                    `;
+                    aiAnalysisContent.innerHTML = analysisText;
+                } catch (error) {
+                    aiAnalysisContent.innerHTML = `<p class="text-danger">เกิดข้อผิดพลาดในการวิเคราะห์ข้อมูล: ${error.message}</p>`;
+                    console.error("AI Analysis Error:", error);
+                }
+            }, 1500); // Simulate network delay
+        }
+
+
         window.addEventListener("DOMContentLoaded", () => {
             yearSelect.value = new Date().getFullYear();
-            loadData(); // โหลดข้อมูลหลักของรายงานยอดขาย
-            // loadProductJarHeader(); // ไม่ต้องเรียกตรงนี้แล้ว เพราะ loadData() จะเรียก renderProductJarTable()
+            loadData();
         });
     </script>
-    
 </body>
 </html>
