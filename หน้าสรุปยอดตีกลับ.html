@@ -1,216 +1,626 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
-    <meta charset="UTF-8" />
-    <title>รายงานยอดยกเลิกตาม Seller SKU</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <meta charset="UTF-8">
+    <title>📊 สรุปยอดรายเดือน</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .nav-buttons-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .nav-buttons-container .btn {
+            min-width: 150px;
+            text-align: center;
+        }
+
+        /* Adjust table heading for better readability */
+        #monthlySummaryTable thead th {
+            white-space: nowrap;
+        }
+    </style>
 </head>
-<body class="p-4">
-    <div class="container">
-        <h3 class="mb-4 text-primary">📊 รายงานยอดยกเลิกตาม Seller SKU</h3>
 
-        <div class="row mb-3 g-3 align-items-end">
-            <div class="col-md-2">
-                <label for="yearSelect" class="form-label fw-bold">เลือกปี</label>
-                <select id="yearSelect" class="form-select"></select>
+<body class="bg-light">
+    <div class="container my-5">
+        <div class="nav-buttons-container">
+            <a href="คิดยอดยกเลิก.html" class="btn btn-outline-info">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                    class="bi bi-arrow-left-circle" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                        d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z" />
+                </svg>
+                กลับหน้าอัปโหลด Excel
+            </a>
+            <a href="index.html" class="btn btn-outline-primary">
+                กลับหน้าหลัก
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                    class="bi bi-house-door" viewBox="0 0 16 16">
+                    <path
+                        d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10V9.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5V14z" />
+                </svg>
+            </a>
+        </div>
+        <h2 class="mb-4">📈 สรุปยอดรวมรายเดือนจาก Supabase</h2>
+
+        <div class="mb-3">
+            <label for="merchantIdFilter" class="form-label">กรองด้วยรหัสร้านค้า (Merchant ID):</label>
+            <select class="form-select" id="merchantIdFilter">
+                <option value="">-- แสดงทั้งหมด --</option>
+            </select>
+        </div>
+
+        <div class="mb-4 d-flex justify-content-end">
+            <button id="refreshDataBtn" class="btn btn-primary me-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                    class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                        d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z" />
+                    <path
+                        d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466" />
+                </svg>
+                รีเฟรชข้อมูล
+            </button>
+            <button id="downloadSummaryExcelBtn" class="btn btn-success" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                    class="bi bi-file-earmark-arrow-down" viewBox="0 0 16 16">
+                    <path
+                        d="M8.5 6.5a.5.5 0 0 0-1 0v3.793L6.354 9.146a.5.5 0 1 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L8.5 10.293z" />
+                    <path
+                        d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                </svg>
+                ดาวน์โหลดสรุป Excel
+            </button>
+        </div>
+
+
+        <div id="loadingStatus" class="alert alert-info text-center" style="display: none;">
+            <div class="spinner-border text-primary me-2" role="status">
+                <span class="visually-hidden">กำลังโหลด...</span>
             </div>
-            <div class="col-md-3">
-                <label for="monthSelect" class="form-label fw-bold">เลือกเดือน</label>
-                <select id="monthSelect" class="form-select">
-                    <option value="">ทั้งหมด</option>
-                    <option value="1">มกราคม</option>
-                    <option value="2">กุมภาพันธ์</option>
-                    <option value="3">มีนาคม</option>
-                    <option value="4">เมษายน</option>
-                    <option value="5">พฤษภาคม</option>
-                    <option value="6">มิถุนายน</option>
-                    <option value="7">กรกฎาคม</option>
-                    <option value="8">สิงหาคม</option>
-                    <option value="9">กันยายน</option>
-                    <option value="10">ตุลาคม</option>
-                    <option value="11">พฤศจิกายน</option>
-                    <option value="12">ธันวาคม</option>
-                </select>
+            <strong>กำลังดึงข้อมูล...</strong> โปรดรอสักครู่
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">สรุปยอดรวมแต่ละเดือน</h5>
             </div>
-            <div class="col-md-3">
-                <label for="shopSelect" class="form-label fw-bold">เลือกร้าน</label>
-                <select id="shopSelect" class="form-select">
-                    <option value="">ทั้งหมด</option>
-                </select>
-            </div>
-            <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-primary flex-grow-1" id="btnFilter">🔍 ค้นหา</button>
-                <button class="btn btn-outline-secondary flex-grow-1" id="btnClear">❌ ล้างฟิลเตอร์</button>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>รหัสร้านค้า</th>
+                                <th>ปี</th>
+                                <th>เดือน</th>
+                                <th>Quantity รวม</th>
+                                <th>ยอดขายรวม (บาท)</th>
+                                <th>จัดการ</th> </tr>
+                        </thead>
+                        <tbody id="monthlySummaryTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">กำลังโหลดข้อมูล...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped align-middle text-center">
-                <thead class="table-primary">
-                    <tr>
-                        <th>Seller SKU</th>
-                        <th>จำนวนยอดยกเลิก</th>
-                        <th>ยอดเงินยกเลิก (บาท)</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr><td colspan="3">กำลังโหลดข้อมูล...</td></tr>
-                </tbody>
-                <tfoot>
-                    <tr class="fw-bold">
-                        <td>รวม</td>
-                        <td id="totalQty">0</td>
-                        <td id="totalAmount">0.00</td>
-                    </tr>
-                </tfoot>
-            </table>
+        <div class="card mt-5">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">สรุปยอดรวมตาม SKU (แสดงทั้งหมด หรือตาม Merchant ID ที่เลือก)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Seller SKU</th>
+                                <th>Quantity รวม</th>
+                                <th>ยอดขายรวม (บาท)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="skuDetailByMerchantTableBody">
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">กำลังโหลดข้อมูล SKU ทั้งหมด...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+
+        <div class="card mt-5">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">สรุปจำนวนกระปุกแต่ละสินค้า (ตาม Merchant ID ที่เลือก หรือแสดงทั้งหมด)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ชื่อสินค้า</th>
+                                <th>จำนวนกระปุกรวม</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productQuantityTableBody">
+                            <tr>
+                                <td colspan="2" class="text-center text-muted">กำลังโหลดข้อมูลสินค้า...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-<script>
-    // เชื่อมต่อ Supabase
-    const supabaseUrl = "https://vzxttbvwukpsxqdaulvo.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U";
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-    const yearSelect = document.getElementById('yearSelect');
-    const monthSelect = document.getElementById('monthSelect');
-    const shopSelect = document.getElementById('shopSelect');
-    const btnFilter = document.getElementById('btnFilter');
-    const btnClear = document.getElementById('btnClear');
-    const tableBody = document.getElementById('tableBody');
-    const totalQty = document.getElementById('totalQty');
-    const totalAmount = document.getElementById('totalAmount');
+    <script>
+        const SUPABASE_URL = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
+        supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // เติมปีใน select ปีตั้งแต่ 2022 ถึงปีปัจจุบัน
-    function populateYearOptions() {
-        const currentYear = new Date().getFullYear();
-        for(let y=2022; y<=currentYear; y++) {
-            const option = document.createElement('option');
-            option.value = y;
-            option.textContent = y;
-            yearSelect.appendChild(option);
+        let cachedMonthlySummaryData = []; // To store data for export and re-rendering (monthly aggregates)
+        let cachedSKUDetailsData = []; // To store ALL fetched data from monthly_sku_summary (raw rows)
+        let cachedSKUProductMapping = {}; // To store mapping from seller_sku to product_description from daily_sku_usage_skus
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchAndDisplayAllSummaries();
+        });
+
+        document.getElementById('refreshDataBtn').addEventListener('click', async () => {
+            await fetchAndDisplayAllSummaries();
+        });
+
+        document.getElementById('merchantIdFilter').addEventListener('change', async (e) => {
+            const filterValue = e.target.value.trim().toLowerCase();
+            // Re-render both SKU summary and product quantity summary based on new filter
+            await fetchAndDisplaySKUDetailsByMerchant(filterValue);
+            await fetchAndDisplayProductQuantitySummary(filterValue);
+        });
+
+        document.getElementById('downloadSummaryExcelBtn').addEventListener('click', () => {
+            exportToExcel();
+        });
+
+        // Helper function to parse product_description string
+        function parseDescription(desc) {
+            if (!desc) return [];
+            const prefixRemoved = desc.replace(/^สินค้า\s*/, '');
+            if (!prefixRemoved) return [];
+            const parts = prefixRemoved.split('+');
+            return parts.map(part => {
+                const m = part.match(/(.+?)\s*([0-9]+)\s*กระปุก/);
+                if (m) {
+                    return {
+                        product: m[1].trim(),
+                        qty: parseInt(m[2], 10)
+                    };
+                } else {
+                    return {
+                        product: part.trim(),
+                        qty: 0
+                    };
+                }
+            });
         }
-        yearSelect.value = currentYear;
-    }
 
-    // โหลดร้านทั้งหมดจากตาราง cancellation_history (distinct shop_name)
-    async function loadShopOptions() {
-        const { data, error } = await supabase
-            .from('cancellation_history')
-            .select('shop_name', { distinct: true })
-            .order('shop_name', { ascending: true });
+        async function fetchAndDisplayAllSummaries() {
+            document.getElementById('loadingStatus').style.display = 'block';
+            document.getElementById('monthlySummaryTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-muted">กำลังดึงข้อมูลสรุปรายเดือน...</td></tr>`;
+            document.getElementById('skuDetailByMerchantTableBody').innerHTML = `<tr><td colspan="3" class="text-center text-muted">กำลังโหลดข้อมูล SKU ทั้งหมด...</td></tr>`;
+            document.getElementById('productQuantityTableBody').innerHTML = `<tr><td colspan="2" class="text-center text-muted">กำลังโหลดข้อมูลสินค้า...</td></tr>`;
+            document.getElementById('downloadSummaryExcelBtn').style.display = 'none';
 
-        if (error) {
-            console.error('โหลดร้านไม่สำเร็จ:', error.message);
-            return;
-        }
+            try {
+                // 1. Fetch monthly_sku_summary
+                const { data: monthlySummaryData, error: monthlySummaryError } = await supabase
+                    .from('monthly_sku_summary')
+                    .select('merchant_id, seller_sku, total_quantity, total_order_amount, summary_year, summary_month')
+                    .order('summary_year', { ascending: false })
+                    .order('summary_month', { ascending: false })
+                    .order('merchant_id', { ascending: true })
+                    .order('seller_sku', { ascending: true });
 
-        // ล้างตัวเลือกเก่า
-        shopSelect.innerHTML = `<option value="">ทั้งหมด</option>`;
-        data.forEach(row => {
-            if(row.shop_name) {
-                const opt = document.createElement('option');
-                opt.value = row.shop_name;
-                opt.textContent = row.shop_name;
-                shopSelect.appendChild(opt);
+                if (monthlySummaryError) {
+                    throw new Error(`Error fetching monthly summary: ${monthlySummaryError.message}`);
+                }
+
+                if (!monthlySummaryData || monthlySummaryData.length === 0) {
+                    document.getElementById('monthlySummaryTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-muted">ไม่พบข้อมูลสรุปรายเดือนในระบบ</td></tr>`;
+                    document.getElementById('skuDetailByMerchantTableBody').innerHTML = `<tr><td colspan="3" class="text-center text-muted">ไม่พบข้อมูล SKU ในระบบ</td></tr>`;
+                    document.getElementById('productQuantityTableBody').innerHTML = `<tr><td colspan="2" class="text-center text-muted">ไม่พบข้อมูลสินค้าในระบบ</td></tr>`;
+                    populateMerchantIdFilterDropdown([]);
+                    return;
+                }
+
+                // Cache monthly_sku_summary data
+                cachedSKUDetailsData = monthlySummaryData;
+
+                // Aggregate for overall monthly summary (Table 1)
+                const monthlyAggregates = {};
+                monthlySummaryData.forEach(row => {
+                    const key = `${row.merchant_id}-${row.summary_year}-${row.summary_month}`;
+                    if (!monthlyAggregates[key]) {
+                        monthlyAggregates[key] = {
+                            merchant_id: row.merchant_id,
+                            summary_year: row.summary_year,
+                            summary_month: row.summary_month,
+                            total_quantity_sum: 0,
+                            total_order_amount_sum: 0
+                        };
+                    }
+                    monthlyAggregates[key].total_quantity_sum += row.total_quantity;
+                    monthlyAggregates[key].total_order_amount_sum += row.total_order_amount;
+                });
+
+                cachedMonthlySummaryData = Object.values(monthlyAggregates).sort((a, b) => {
+                    if (a.summary_year !== b.summary_year) return b.summary_year - a.summary_year;
+                    if (a.summary_month !== b.summary_month) return b.summary_month - a.summary_month;
+                    return a.merchant_id.localeCompare(b.merchant_id);
+                });
+
+                renderMonthlySummaryTable(cachedMonthlySummaryData);
+                document.getElementById('downloadSummaryExcelBtn').style.display = 'inline-block';
+
+                // 2. Fetch daily_sku_usage_skus for product descriptions
+                const { data: skuProductData, error: skuProductError } = await supabase
+                    .from('daily_sku_usage_skus')
+                    .select('sku_name, product_description');
+
+                if (skuProductError) {
+                    throw new Error(`Error fetching SKU product mapping: ${skuProductError.message}`);
+                }
+
+                cachedSKUProductMapping = {};
+                skuProductData.forEach(row => {
+                    cachedSKUProductMapping[row.sku_name] = parseDescription(row.product_description);
+                });
+
+
+                // Populate dropdown and trigger initial renders
+                populateMerchantIdFilterDropdown(cachedSKUDetailsData);
+                const currentMerchantIdFilter = document.getElementById('merchantIdFilter').value.trim().toLowerCase();
+                await fetchAndDisplaySKUDetailsByMerchant(currentMerchantIdFilter);
+                await fetchAndDisplayProductQuantitySummary(currentMerchantIdFilter);
+
+
+            } catch (error) {
+                console.error('Unexpected error in fetchAndDisplayAllSummaries:', error);
+                document.getElementById('monthlySummaryTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">เกิดข้อผิดพลาดในการดึงข้อมูล: ${error.message}</td></tr>`;
+                document.getElementById('skuDetailByMerchantTableBody').innerHTML = `<tr><td colspan="3" class="text-center text-danger">เกิดข้อผิดพลาดในการดึงข้อมูล: ${error.message}</td></tr>`;
+                document.getElementById('productQuantityTableBody').innerHTML = `<tr><td colspan="2" class="text-center text-danger">เกิดข้อผิดพลาดในการดึงข้อมูล: ${error.message}</td></tr>`;
+                populateMerchantIdFilterDropdown([]);
+            } finally {
+                document.getElementById('loadingStatus').style.display = 'none';
             }
-        });
-    }
-
-    // ฟังก์ชันโหลดข้อมูลยกเลิก
-    async function loadCancellationData() {
-        tableBody.innerHTML = `<tr><td colspan="3">กำลังโหลดข้อมูล...</td></tr>`;
-
-        // กรองวันที่ ตามปี + เดือน
-        let startDate, endDate;
-
-        const year = yearSelect.value;
-        const month = monthSelect.value;
-
-        if (year && month) {
-            startDate = dayjs(`${year}-${month}-01`).startOf('month').format('YYYY-MM-DD');
-            endDate = dayjs(`${year}-${month}-01`).endOf('month').format('YYYY-MM-DD');
-        } else if(year && !month) {
-            startDate = dayjs(`${year}-01-01`).format('YYYY-MM-DD');
-            endDate = dayjs(`${year}-12-31`).format('YYYY-MM-DD');
         }
 
-        // สร้าง query
-        let query = supabase.from('cancellation_history').select('seller_sku, qty_cancelled, amount_cancelled');
 
-        if (startDate) query = query.gte('date', startDate);
-        if (endDate) query = query.lte('date', endDate);
+        function populateMerchantIdFilterDropdown(data) {
+            const dropdown = document.getElementById('merchantIdFilter');
+            dropdown.innerHTML = '<option value="">-- แสดงทั้งหมด --</option>'; // Reset dropdown
 
-        const shop = shopSelect.value;
-        if (shop) query = query.eq('shop_name', shop);
+            const uniqueMerchantIds = new Set();
+            data.forEach(row => {
+                if (row.merchant_id) {
+                    uniqueMerchantIds.add(row.merchant_id);
+                }
+            });
 
-        const { data, error } = await query;
+            const sortedMerchantIds = Array.from(uniqueMerchantIds).sort();
 
-        if (error) {
-            console.error('โหลดข้อมูลยกเลิกไม่สำเร็จ:', error.message);
-            tableBody.innerHTML = `<tr><td colspan="3" class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`;
-            return;
+            sortedMerchantIds.forEach(id => {
+                const option = document.createElement('option');
+                option.value = id.toLowerCase(); // Use lowercase for value to match filter logic
+                option.textContent = id;
+                dropdown.appendChild(option);
+            });
         }
 
-        if (!data || data.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="3">ไม่พบข้อมูลในช่วงเวลานี้</td></tr>`;
-            totalQty.textContent = '0';
-            totalAmount.textContent = '0.00';
-            return;
-        }
+        function renderMonthlySummaryTable(data) {
+            const tbody = document.getElementById('monthlySummaryTableBody');
+            tbody.innerHTML = ''; // Clear existing rows
 
-        // สรุปยอดยกเลิกตาม seller_sku
-        const summaryMap = {};
-
-        data.forEach(row => {
-            if(!summaryMap[row.seller_sku]) {
-                summaryMap[row.seller_sku] = { qty: 0, amount: 0 };
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">ไม่พบข้อมูลสรุปรายเดือน</td></tr>`;
+                return;
             }
-            summaryMap[row.seller_sku].qty += row.qty_cancelled || 0;
-            summaryMap[row.seller_sku].amount += parseFloat(row.amount_cancelled) || 0;
-        });
 
-        // สร้างตารางแสดงผล
-        let html = '';
-        let totalQtyVal = 0;
-        let totalAmountVal = 0;
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.merchant_id}</td>
+                    <td>${item.summary_year}</td>
+                    <td>${getMonthName(item.summary_month)}</td>
+                    <td>${item.total_quantity_sum.toLocaleString()}</td>
+                    <td>${item.total_order_amount_sum.toFixed(2).toLocaleString()}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" 
+                            onclick="deleteMonthlySummary('${item.merchant_id}', ${item.summary_year}, ${item.summary_month})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H9.5a1 1 0 0 1 1 1v.5h2a1 1 0 0 1 1 1zM2.5 3a.5.5 0 0 0 0 1H3v9a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4h.5a.5.5 0 0 0 0-1zM11.5 2h-7A.5.5 0 0 0 4 2.5V3h8V2.5a.5.5 0 0 0-.5-.5"/>
+                            </svg>
+                            ลบ
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
-        Object.entries(summaryMap).forEach(([sku, val]) => {
-            html += `<tr>
-                <td>${sku}</td>
-                <td>${val.qty.toLocaleString('th-TH')}</td>
-                <td>${val.amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-            </tr>`;
-            totalQtyVal += val.qty;
-            totalAmountVal += val.amount;
-        });
+        // New function to delete monthly summary from Supabase
+        async function deleteMonthlySummary(merchantId, year, month) {
+            const confirmDelete = confirm(`คุณต้องการลบข้อมูลสรุปของรหัสร้านค้า ${merchantId} สำหรับเดือน ${getMonthName(month)} ปี ${year} ใช่หรือไม่? \n\nการดำเนินการนี้จะลบข้อมูล SKU ทั้งหมดของเดือนนี้ใน Supabase ด้วย!`);
+            
+            if (!confirmDelete) {
+                return; // User cancelled
+            }
 
-        tableBody.innerHTML = html;
-        totalQty.textContent = totalQtyVal.toLocaleString('th-TH');
-        totalAmount.textContent = totalAmountVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
+            document.getElementById('loadingStatus').style.display = 'block';
+            document.getElementById('loadingStatus').innerHTML = `<div class="spinner-border text-danger me-2" role="status"><span class="visually-hidden">กำลังลบ...</span></div><strong>กำลังลบข้อมูล...</strong> โปรดรอสักครู่`;
 
-    btnFilter.addEventListener('click', loadCancellationData);
 
-    btnClear.addEventListener('click', () => {
-        yearSelect.value = new Date().getFullYear();
-        monthSelect.value = '';
-        shopSelect.value = '';
-        loadCancellationData();
-    });
+            try {
+                const { error } = await supabase
+                    .from('monthly_sku_summary')
+                    .delete()
+                    .eq('merchant_id', merchantId)
+                    .eq('summary_year', year)
+                    .eq('summary_month', month);
 
-    // โหลดข้อมูลร้านค้าและปีตอนเริ่มหน้า
-    window.addEventListener('DOMContentLoaded', async () => {
-        populateYearOptions();
-        await loadShopOptions();
-        await loadCancellationData();
-    });
-</script>
+                if (error) {
+                    throw new Error(`Error deleting monthly summary: ${error.message}`);
+                }
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+                alert(`ลบข้อมูลสรุปของรหัสร้านค้า ${merchantId} เดือน ${getMonthName(month)} ปี ${year} สำเร็จแล้ว!`);
+                await fetchAndDisplayAllSummaries(); // Refresh all tables after deletion
+
+            } catch (error) {
+                console.error('Error during deletion:', error);
+                alert(`เกิดข้อผิดพลาดในการลบข้อมูล: ${error.message}`);
+            } finally {
+                document.getElementById('loadingStatus').style.display = 'none';
+                document.getElementById('loadingStatus').innerHTML = `<div class="spinner-border text-primary me-2" role="status"><span class="visually-hidden">กำลังโหลด...</span></div><strong>กำลังดึงข้อมูล...</strong> โปรดรอสักครู่`; // Reset loading message
+            }
+        }
+
+
+        async function fetchAndDisplaySKUDetailsByMerchant(merchantId) {
+            const tbody = document.getElementById('skuDetailByMerchantTableBody');
+
+            let dataToProcess;
+            if (merchantId === '') {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">กำลังแสดงข้อมูล SKU ทั้งหมด...</td></tr>`;
+                dataToProcess = cachedSKUDetailsData;
+            } else {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">กำลังกรองข้อมูล SKU ด้วย Merchant ID: ${merchantId}...</td></tr>`;
+                dataToProcess = cachedSKUDetailsData.filter(row =>
+                    row.merchant_id.toLowerCase() === merchantId
+                );
+            }
+
+            const skuAggregates = {};
+            dataToProcess.forEach(row => {
+                const key = row.seller_sku;
+                if (!skuAggregates[key]) {
+                    skuAggregates[key] = {
+                        seller_sku: row.seller_sku,
+                        total_quantity_sum: 0,
+                        total_order_amount_sum: 0
+                    };
+                }
+                skuAggregates[key].total_quantity_sum += row.total_quantity;
+                skuAggregates[key].total_order_amount_sum += row.total_order_amount;
+            });
+
+            const aggregatedSKUs = Object.values(skuAggregates).sort((a, b) =>
+                a.seller_sku.localeCompare(b.seller_sku)
+            );
+
+            renderSKUDetailsTable(aggregatedSKUs, merchantId === '');
+        }
+
+
+        function renderSKUDetailsTable(data, isShowingAll = false) {
+            const tbody = document.getElementById('skuDetailByMerchantTableBody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            if (data.length === 0) {
+                if (isShowingAll) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">ไม่พบข้อมูล SKU ในระบบ</td></tr>`;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">ไม่พบข้อมูล SKU สำหรับ Merchant ID นี้</td></tr>`;
+                }
+                return;
+            }
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.seller_sku}</td>
+                    <td>${item.total_quantity_sum.toLocaleString()}</td>
+                    <td>${item.total_order_amount_sum.toFixed(2).toLocaleString()}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function fetchAndDisplayProductQuantitySummary(merchantId) {
+            const tbody = document.getElementById('productQuantityTableBody');
+            tbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted">กำลังโหลดข้อมูลสินค้า...</td></tr>`;
+
+            // Filter monthly_sku_summary data by merchantId if provided
+            const filteredSKUDetails = merchantId === ''
+                ? cachedSKUDetailsData
+                : cachedSKUDetailsData.filter(row => row.merchant_id.toLowerCase() === merchantId);
+
+            const productAggregates = {};
+
+            filteredSKUDetails.forEach(skuRow => {
+                const sellerSku = skuRow.seller_sku;
+                const totalQuantityForSKU = skuRow.total_quantity; // This is the total quantity of the SKU itself
+
+                // Get the product breakdown for this seller_sku from the mapping
+                const productBreakdown = cachedSKUProductMapping[sellerSku];
+
+                if (productBreakdown && productBreakdown.length > 0) {
+                    productBreakdown.forEach(productDetail => {
+                        const productName = productDetail.product;
+                        const qtyPerSKUUnit = productDetail.qty; // Quantity of this product per 1 unit of the SKU
+
+                        // Calculate actual product quantity for this SKU's total_quantity
+                        const actualProductQuantity = qtyPerSKUUnit * totalQuantityForSKU;
+
+                        if (!productAggregates[productName]) {
+                            productAggregates[productName] = 0;
+                        }
+                        productAggregates[productName] += actualProductQuantity;
+                    });
+                }
+            });
+
+            const aggregatedProducts = Object.entries(productAggregates).map(([product, totalQty]) => ({
+                product_name: product,
+                total_quantity: totalQty
+            })).sort((a, b) => a.product_name.localeCompare(b.product_name));
+
+            renderProductQuantityTable(aggregatedProducts, merchantId === '');
+        }
+
+
+        function renderProductQuantityTable(data, isShowingAll = false) {
+            const tbody = document.getElementById('productQuantityTableBody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            if (data.length === 0) {
+                if (isShowingAll) {
+                    tbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted">ไม่พบข้อมูลสินค้าในระบบ</td></tr>`;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted">ไม่พบข้อมูลสินค้าสำหรับ Merchant ID นี้</td></tr>`;
+                }
+                return;
+            }
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.product_name}</td>
+                    <td>${item.total_quantity.toLocaleString()} กระปุก</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+
+        function getMonthName(monthNumber) {
+            const date = new Date(2000, monthNumber - 1, 1); // Use 2000 as dummy year
+            return date.toLocaleString('th-TH', { month: 'long' });
+        }
+
+        function exportToExcel() {
+            if (cachedMonthlySummaryData.length === 0 && cachedSKUDetailsData.length === 0) {
+                alert('ไม่มีข้อมูลให้ดาวน์โหลด โปรดรีเฟรชข้อมูลก่อน');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            // Sheet 1: Monthly Summary
+            const monthlySummaryHeader = ['รหัสร้านค้า', 'ปี', 'เดือน', 'Quantity รวมทั้งหมด', 'ยอดขายรวมทั้งหมด (บาท)'];
+            const monthlySummaryDataForExport = cachedMonthlySummaryData.map(item => [
+                item.merchant_id,
+                item.summary_year,
+                item.summary_month, // Keep as number for sorting in Excel if needed
+                item.total_quantity_sum,
+                item.total_order_amount_sum.toFixed(2)
+            ]);
+            if (monthlySummaryDataForExport.length > 0) {
+                const wsMonthlySummary = XLSX.utils.aoa_to_sheet([monthlySummaryHeader, ...monthlySummaryDataForExport]);
+                XLSX.utils.book_append_sheet(wb, wsMonthlySummary, "สรุปยอดรายเดือน");
+            } else {
+                const wsMonthlySummary = XLSX.utils.aoa_to_sheet([monthlySummaryHeader, ['ไม่มีข้อมูล']]);
+                XLSX.utils.book_append_sheet(wb, wsMonthlySummary, "สรุปยอดรายเดือน");
+            }
+
+            // Sheet 2: All SKU Details (raw data from fetch)
+            const allSKUDetailsHeader = ['รหัสร้านค้า', 'Seller SKU', 'Quantity', 'Order Amount', 'ปี', 'เดือน'];
+            const allSKUDetailsDataForExport = cachedSKUDetailsData.map(item => [
+                item.merchant_id,
+                item.seller_sku,
+                item.total_quantity,
+                item.total_order_amount.toFixed(2),
+                item.summary_year,
+                item.summary_month // Keep as number
+            ]);
+            if (allSKUDetailsDataForExport.length > 0) {
+                const wsAllSKUDetails = XLSX.utils.aoa_to_sheet([allSKUDetailsHeader, ...allSKUDetailsDataForExport]);
+                XLSX.utils.book_append_sheet(wb, wsAllSKUDetails, "ข้อมูล SKU ทั้งหมด");
+            } else {
+                const wsAllSKUDetails = XLSX.utils.aoa_to_sheet([allSKUDetailsHeader, ['ไม่มีข้อมูล']]);
+                XLSX.utils.book_append_sheet(wb, wsAllSKUDetails, "ข้อมูล SKU ทั้งหมด");
+            }
+
+            // Sheet 3: Product Quantity Summary
+            // Need to calculate this for export based on current filter or all
+            const currentMerchantIdFilter = document.getElementById('merchantIdFilter').value.trim().toLowerCase();
+            const filteredSKUDetailsForExport = currentMerchantIdFilter === ''
+                ? cachedSKUDetailsData
+                : cachedSKUDetailsData.filter(row => row.merchant_id.toLowerCase() === currentMerchantIdFilter);
+
+            const productAggregatesForExport = {};
+            filteredSKUDetailsForExport.forEach(skuRow => {
+                const sellerSku = skuRow.seller_sku;
+                const totalQuantityForSKU = skuRow.total_quantity;
+                const productBreakdown = cachedSKUProductMapping[sellerSku];
+
+                if (productBreakdown && productBreakdown.length > 0) {
+                    productBreakdown.forEach(productDetail => {
+                        const productName = productDetail.product;
+                        const qtyPerSKUUnit = productDetail.qty;
+                        const actualProductQuantity = qtyPerSKUUnit * totalQuantityForSKU;
+
+                        if (!productAggregatesForExport[productName]) {
+                            productAggregatesForExport[productName] = 0;
+                        }
+                        productAggregatesForExport[productName] += actualProductQuantity;
+                    });
+                }
+            });
+
+            const productQuantityDataForExport = Object.entries(productAggregatesForExport).map(([product, totalQty]) => [
+                product,
+                totalQty
+            ]).sort((a, b) => a[0].localeCompare(b[0]));
+
+
+            const productQuantityHeader = ['ชื่อสินค้า', 'จำนวนกระปุกรวม'];
+            if (productQuantityDataForExport.length > 0) {
+                const wsProductQuantity = XLSX.utils.aoa_to_sheet([productQuantityHeader, ...productQuantityDataForExport]);
+                XLSX.utils.book_append_sheet(wb, wsProductQuantity, "สรุปจำนวนกระปุกสินค้า");
+            } else {
+                const wsProductQuantity = XLSX.utils.aoa_to_sheet([productQuantityHeader, ['ไม่มีข้อมูล']]);
+                XLSX.utils.book_append_sheet(wb, wsProductQuantity, "สรุปจำนวนกระปุกสินค้า");
+            }
+
+
+            const fileName = `Monthly_SKU_Report_${new Date().toLocaleDateString('en-CA')}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+    </script>
 </body>
+
 </html>
