@@ -1,99 +1,264 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <title>บันทึกข้อมูลโฆษณา</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <style>
-    body { background-color: #f8f9fa; }
-    .card { border-radius: 1rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
-    .table tfoot td { font-weight: bold; background-color: #f1f1f1; }
-    .btn-icon { display: inline-flex; align-items: center; gap: 0.4em; }
-    .btn-outline-secondary:hover { background-color: #e2e6ea; }
-  </style>
+    <meta charset="UTF-8" />
+    <title>บันทึกข้อมูลโฆษณา</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <style>
+        body {
+            background-color: #e9f0f6; /* Lighter, soft blue background */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background-color: #ffffff; /* White navbar for crisp look */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); /* More prominent shadow */
+            transition: transform 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-3px); /* Subtle lift on hover */
+        }
+        .card-header {
+            background-color: #f0f8ff; /* Lightest blue for header */
+            border-bottom: 1px solid #dcdcdc;
+            font-weight: bold;
+            color: #34495e; /* Darker text for contrast */
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+            padding: 1.25rem 1.5rem;
+            font-size: 1.15rem;
+        }
+        .table thead {
+            background-color: #e0e9f0; /* Soft blue for table header */
+            color: #34495e;
+        }
+        .table tbody tr:nth-child(even) {
+            background-color: #f6faff; /* Lighter row background */
+        }
+        .table tfoot td {
+            font-weight: bold;
+            background-color: #dbe4ec; /* Slightly darker footer */
+            color: #2c3e50;
+            border-top: 2px solid #b0c4de;
+        }
+        .btn-primary {
+            background-color: #007bff; /* Bootstrap primary blue */
+            border-color: #007bff;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+            border-color: #004085;
+        }
+        .btn-outline-primary {
+            color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-outline-primary:hover {
+            background-color: #e6f2ff;
+            color: #0056b3;
+            border-color: #0056b3;
+        }
+        .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #343a40; /* Darker text for readability */
+        }
+        .btn-warning:hover {
+            background-color: #e0a800;
+            border-color: #cc9c00;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+        .form-control, .form-select {
+            border-radius: 0.5rem; /* Slightly rounded inputs */
+            border: 1px solid #ced4da;
+            padding: 0.75rem 1rem;
+        }
+        .badge {
+            font-size: 0.9em;
+            padding: 0.6em 0.9em;
+            border-radius: 0.5rem;
+        }
+        .bi {
+            vertical-align: middle; /* Align icons nicely */
+        }
+    </style>
 </head>
 <body>
 
-
-  <h2 class="text-center mb-4 text-primary">📅 บันทึกข้อมูลโฆษณา</h2>
-<div class="container py-4">
-  <div class="d-flex justify-content-between mb-4">
-    <a href="index.html" class="btn btn-outline-primary btn-icon"><i class="bi bi-house-door"></i> หน้าหลัก</a>
-    <a href="หน้าสรุปยอดค่าแอด.html" class="btn btn-outline-secondary btn-icon"><i class="bi bi-graph-up-arrow"></i> สรุปยอดค่าแอด</a>
-  </div>
-  <!-- จัดการเจ้าของบัญชี -->
-  <div class="card p-3 mb-4">
-    <h5 class="mb-3">👤 จัดการชื่อเจ้าของบัญชี</h5>
-    <div class="input-group">
-      <input type="text" id="newOwner" class="form-control" placeholder="พิมพ์ชื่อเจ้าของบัญชีใหม่" />
-      <button class="btn btn-success" id="btnAddOwner"><i class="bi bi-plus-circle"></i> เพิ่ม</button>
+<nav class="navbar navbar-expand-lg navbar-light">
+    <div class="container-fluid container">
+        <a class="navbar-brand text-primary fw-bold" href="#">
+            <i class="bi bi-bar-chart-fill me-2"></i>ระบบบันทึกข้อมูลโฆษณา
+        </a>
+        <div class="d-flex ms-auto">
+            <a href="index.html" class="btn btn-outline-primary btn-icon me-2">
+                <i class="bi bi-house-door"></i> หน้าหลัก
+            </a>
+            <a href="หน้าสรุปยอดค่าแอด.html" class="btn btn-outline-secondary btn-icon">
+                <i class="bi bi-graph-up-arrow"></i> สรุปยอดค่าแอด
+            </a>
+        </div>
     </div>
-    <div id="ownerList" class="d-flex flex-wrap gap-2 mt-3"></div>
-  </div>
+</nav>
 
-  <!-- ฟอร์มบันทึก -->
-  <div class="card p-4 mb-4">
-    <form id="adForm">
-      <input type="hidden" id="editId" />
-      <div class="row g-3">
-        <div class="col-md-3"><label class="form-label">วันที่</label><input type="date" id="date" class="form-control" required /></div>
-        <div class="col-md-3"><label class="form-label">ชื่อบัญชี</label><input type="text" id="accountName" class="form-control" required /></div>
-        <div class="col-md-3"><label class="form-label">ID บัญชี</label><input type="text" id="accountId" class="form-control" required /></div>
-        <div class="col-md-3"><label class="form-label">เจ้าของบัญชี</label><select id="owner" class="form-select" required></select></div>
-        <div class="col-md-3"><label class="form-label">สถานะบัญชี</label><select id="status" class="form-select"><option>ใช้งานปกติ</option><option>ระงับ</option></select></div>
-        <div class="col-md-3"><label class="form-label">ค่าใช้จ่าย</label><input type="number" id="spendTotal" class="form-control" step="0.01" value="0" /></div>
-        <div class="col-md-3"><label class="form-label">ต้นทุน/ซื้อ</label><input type="number" id="costPerPurchase" class="form-control" step="0.01" value="0" /></div>
-        <div class="col-md-3"><label class="form-label">จำนวนซื้อ</label><input type="number" id="purchases" class="form-control" value="0" /></div>
-        <div class="col-md-3"><label class="form-label">รายได้</label><input type="number" id="revenue" class="form-control" step="0.01" value="0" /></div>
-        <div class="col-md-3"><label class="form-label">ROAS</label><input type="number" id="roas" class="form-control" step="0.01" value="0" /></div>
-      </div>
-      <div class="mt-4 text-end">
-        <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save"></i> บันทึกข้อมูล</button>
-      </div>
-    </form>
-  </div>
+<div class="container py-5">
+    <h2 class="text-center mb-5 text-primary display-5 fw-bold">📅 บันทึกข้อมูลโฆษณา</h2>
 
-  <!-- ฟิลเตอร์ -->
-  <div class="mb-3 d-flex justify-content-between align-items-center">
-    <label class="form-label">กรองโดยเจ้าของบัญชี</label>
-    <select id="filterOwner" class="form-select w-auto"></select>
-  </div>
-
-  <!-- ปุ่มแสดง/ซ่อนข้อมูลย้อนหลัง -->
-  <div class="mb-3 text-end">
-    <button id="toggleHistoryBtn" class="btn btn-outline-secondary">ซ่อนข้อมูลย้อนหลัง</button>
-  </div>
-
-  <!-- ปุ่ม Undo ลบข้อมูลล่าสุด -->
-  <div id="undoContainer" class="mb-3 text-center" style="display:none;">
-    <button id="undoBtn" class="btn btn-sm btn-warning">ยกเลิกการลบข้อมูลล่าสุด</button>
-  </div>
-
-  <!-- ตารางย้อนหลัง -->
-  <div class="card p-4">
-    <h5 class="text-secondary mb-3"><i class="bi bi-clock-history"></i> ข้อมูลย้อนหลัง</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-light">
-          <tr><th>วันที่</th><th>บัญชี</th><th>ID</th><th>เจ้าของ</th><th>สถานะ</th><th>ค่าใช้จ่าย</th><th>ต้นทุน/ซื้อ</th><th>ซื้อ</th><th>รายได้</th><th>ROAS</th><th>จัดการ</th></tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-        <tfoot>
-          <tr>
-            <td colspan="5">รวม</td>
-            <td id="sumSpend">0.00</td>
-            <td id="avgCost">0.00</td>
-            <td id="sumPurchase">0</td>
-            <td id="sumRevenue">0.00</td>
-            <td colspan="2"></td>
-          </tr>
-        </tfoot>
-      </table>
+    <div class="card mb-5">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-person-fill me-2"></i> จัดการชื่อเจ้าของบัญชี</h5>
+        </div>
+        <div class="card-body">
+            <div class="input-group mb-3">
+                <input type="text" id="newOwner" class="form-control form-control-lg" placeholder="พิมพ์ชื่อเจ้าของบัญชีใหม่" />
+                <button class="btn btn-success btn-lg" id="btnAddOwner"><i class="bi bi-plus-circle me-2"></i>เพิ่ม</button>
+            </div>
+            <div id="ownerList" class="d-flex flex-wrap gap-2 mt-3"></div>
+        </div>
     </div>
-  </div>
+
+    <div class="card mb-5">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i> ฟอร์มบันทึกข้อมูลโฆษณา</h5>
+        </div>
+        <div class="card-body">
+            <form id="adForm">
+                <input type="hidden" id="editId" />
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">วันที่</label>
+                        <input type="date" id="date" class="form-control" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">ชื่อบัญชี</label>
+                        <input type="text" id="accountName" class="form-control" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">ID บัญชี</label>
+                        <input type="text" id="accountId" class="form-control" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">เจ้าของบัญชี</label>
+                        <select id="owner" class="form-select" required></select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">สถานะบัญชี</label>
+                        <select id="status" class="form-select">
+                            <option>ใช้งานปกติ</option>
+                            <option>ระงับ</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">ค่าใช้จ่าย</label>
+                        <input type="number" id="spendTotal" class="form-control" step="0.01" value="0" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">ต้นทุน/ซื้อ</label>
+                        <input type="number" id="costPerPurchase" class="form-control" step="0.01" value="0" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">จำนวนซื้อ</label>
+                        <input type="number" id="purchases" class="form-control" value="0" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">รายได้</label>
+                        <input type="number" id="revenue" class="form-control" step="0.01" value="0" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">ROAS</label>
+                        <input type="number" id="roas" class="form-control" step="0.01" value="0" />
+                    </div>
+                </div>
+                <div class="mt-5 text-end">
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-save me-2"></i> บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 p-3 bg-white rounded-3 shadow-sm">
+        <div class="d-flex align-items-center gap-3 mb-2 mb-md-0">
+            <label class="form-label mb-0 fw-bold text-muted">กรอง:</label>
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0">เจ้าของบัญชี</label>
+                <select id="filterOwner" class="form-select form-select-sm w-auto"></select>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0">ชื่อบัญชี</label>
+                <select id="filterAccountName" class="form-select form-select-sm w-auto">
+                    <option value="ทั้งหมด">ทั้งหมด</option>
+                </select>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <button id="toggleHistoryBtn" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-eye me-1"></i> ซ่อนข้อมูลย้อนหลัง
+            </button>
+            <div id="undoContainer" style="display:none;">
+                <button id="undoBtn" class="btn btn-sm btn-warning">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> ยกเลิกการลบ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-4">
+        <h5 class="text-secondary mb-4"><i class="bi bi-clock-history me-2"></i> ข้อมูลย้อนหลัง</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped text-center align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>วันที่</th>
+                        <th>บัญชี</th>
+                        <th>ID</th>
+                        <th>เจ้าของ</th>
+                        <th>สถานะ</th>
+                        <th>ค่าใช้จ่าย</th>
+                        <th>ต้นทุน/ซื้อ</th>
+                        <th>ซื้อ</th>
+                        <th>รายได้</th>
+                        <th>ROAS</th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody"></tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="5">รวม</td>
+                        <td id="sumSpend">0.00</td>
+                        <td id="avgCost">0.00</td>
+                        <td id="sumPurchase">0</td>
+                        <td id="sumRevenue">0.00</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -109,179 +274,252 @@ const toggleBtn = document.getElementById("toggleHistoryBtn");
 
 // โหลดสถานะจาก localStorage
 function loadHistoryVisibility() {
-  const visible = localStorage.getItem("historyVisible");
-  if (visible === "false") {
-    historyTableDiv.style.display = "none";
-    toggleBtn.textContent = "แสดงข้อมูลย้อนหลัง";
-  } else {
-    historyTableDiv.style.display = "block";
-    toggleBtn.textContent = "ซ่อนข้อมูลย้อนหลัง";
-  }
+    const visible = localStorage.getItem("historyVisible");
+    if (visible === "false") {
+        historyTableDiv.style.display = "none";
+        toggleBtn.textContent = "แสดงข้อมูลย้อนหลัง";
+        toggleBtn.querySelector('i').className = "bi bi-eye-fill me-1"; // Change icon to show
+    } else {
+        historyTableDiv.style.display = "block";
+        toggleBtn.textContent = "ซ่อนข้อมูลย้อนหลัง";
+        toggleBtn.querySelector('i').className = "bi bi-eye-slash-fill me-1"; // Change icon to hide
+    }
 }
 
 // บันทึกสถานะและ toggle
 toggleBtn.addEventListener("click", () => {
-  if (historyTableDiv.style.display === "none") {
-    historyTableDiv.style.display = "block";
-    toggleBtn.textContent = "ซ่อนข้อมูลย้อนหลัง";
-    localStorage.setItem("historyVisible", "true");
-  } else {
-    historyTableDiv.style.display = "none";
-    toggleBtn.textContent = "แสดงข้อมูลย้อนหลัง";
-    localStorage.setItem("historyVisible", "false");
-  }
+    if (historyTableDiv.style.display === "none") {
+        historyTableDiv.style.display = "block";
+        toggleBtn.textContent = "ซ่อนข้อมูลย้อนหลัง";
+        toggleBtn.querySelector('i').className = "bi bi-eye-slash-fill me-1";
+        localStorage.setItem("historyVisible", "true");
+    } else {
+        historyTableDiv.style.display = "none";
+        toggleBtn.textContent = "แสดงข้อมูลย้อนหลัง";
+        toggleBtn.querySelector('i').className = "bi bi-eye-fill me-1";
+        localStorage.setItem("historyVisible", "false");
+    }
 });
 
 function showUndoButton(show) {
-  const undoContainer = document.getElementById("undoContainer");
-  undoContainer.style.display = show ? "block" : "none";
+    const undoContainer = document.getElementById("undoContainer");
+    undoContainer.style.display = show ? "block" : "none";
 }
 
 async function loadOwners() {
-  const { data } = await _supabase.from('ad_owners').select('name');
-  const ownerSel = document.getElementById("owner");
-  const filterSel = document.getElementById("filterOwner");
-  const list = document.getElementById("ownerList");
-  ownerSel.innerHTML = `<option disabled selected>เลือกเจ้าของบัญชี</option>`;
-  filterSel.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
-  list.innerHTML = "";
+    const { data } = await _supabase.from('ad_owners').select('name');
+    const ownerSel = document.getElementById("owner");
+    const filterSel = document.getElementById("filterOwner");
+    const list = document.getElementById("ownerList");
 
-  if (data) {
-    data.forEach((o) => {
-      ownerSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
-      filterSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
-      list.innerHTML += `<div class="badge bg-secondary p-2">${o.name}
-        <button class="btn-close btn-sm ms-2" onclick="removeOwner('${o.name}')"></button></div>`;
-    });
-  }
+    ownerSel.innerHTML = `<option disabled selected value="">เลือกเจ้าของบัญชี</option>`; // Added empty value for initial selection
+    filterSel.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
+    list.innerHTML = "";
+
+    if (data) {
+        data.forEach((o) => {
+            ownerSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
+            filterSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
+            list.innerHTML += `<div class="badge bg-primary p-2 d-flex align-items-center me-2 mb-2">${o.name}
+                <button class="btn-close btn-close-white btn-sm ms-2" onclick="removeOwner('${o.name}')" aria-label="Remove"></button></div>`;
+        });
+    }
+}
+
+async function populateAccountNamesFilter() {
+    const { data } = await _supabase.from("ad_history").select("account_name");
+    const filterAccountNameSel = document.getElementById("filterAccountName");
+    filterAccountNameSel.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
+    if (data) {
+        const uniqueAccountNames = [...new Set(data.map(e => e.account_name))].sort();
+        uniqueAccountNames.forEach(name => {
+            filterAccountNameSel.innerHTML += `<option value="${name}">${name}</option>`;
+        });
+    }
 }
 
 async function loadHistory() {
-  const filter = document.getElementById("filterOwner").value;
-  let { data } = await _supabase.from("ad_history").select("*").order("date", { ascending: false });
-  adData = data || [];
-  if (filter !== "ทั้งหมด") adData = adData.filter(e => e.owner === filter);
-  renderTable();
-  showUndoButton(lastDeletedEntry !== null);
+    const filterOwner = document.getElementById("filterOwner").value;
+    const filterAccountName = document.getElementById("filterAccountName").value;
+    let { data } = await _supabase.from("ad_history").select("*").order("date", { ascending: false });
+    adData = data || [];
+
+    if (filterOwner !== "ทั้งหมด") {
+        adData = adData.filter(e => e.owner === filterOwner);
+    }
+    if (filterAccountName !== "ทั้งหมด") {
+        adData = adData.filter(e => e.account_name === filterAccountName);
+    }
+    renderTable();
+    showUndoButton(lastDeletedEntry !== null);
 }
 
 function renderTable() {
-  const tbody = document.getElementById("historyBody");
-  if (adData.length === 0) return tbody.innerHTML = '<tr><td colspan="11">ไม่มีข้อมูล</td></tr>';
-  tbody.innerHTML = "";
-  let sumSpend = 0, sumCost = 0, sumPurchase = 0, sumRevenue = 0;
-  adData.forEach((e, i) => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${e.date}</td><td>${e.account_name}</td><td>${e.account_id}</td><td>${e.owner}</td><td>${e.status}</td>
-        <td>${(+e.spend_total).toFixed(2)}</td><td>${(+e.cost_per_purchase).toFixed(2)}</td><td>${e.purchases}</td>
-        <td>${(+e.revenue).toFixed(2)}</td><td>${(+e.roas).toFixed(2)}</td>
-        <td>
-          <button class="btn btn-sm btn-warning" onclick="editEntry(${i})"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-sm btn-danger" onclick="deleteEntry(${i})"><i class="bi bi-trash"></i></button>
-        </td>
-      </tr>`;
-    sumSpend += +e.spend_total;
-    sumCost += +e.cost_per_purchase;
-    sumPurchase += +e.purchases;
-    sumRevenue += +e.revenue;
-  });
-  document.getElementById("sumSpend").textContent = sumSpend.toFixed(2);
-  document.getElementById("avgCost").textContent = (adData.length ? sumCost / adData.length : 0).toFixed(2);
-  document.getElementById("sumPurchase").textContent = sumPurchase;
-  document.getElementById("sumRevenue").textContent = sumRevenue.toFixed(2);
+    const tbody = document.getElementById("historyBody");
+    if (adData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="text-muted py-4">ไม่มีข้อมูลที่ตรงกับตัวกรอง</td></tr>';
+        document.getElementById("sumSpend").textContent = "0.00";
+        document.getElementById("avgCost").textContent = "0.00";
+        document.getElementById("sumPurchase").textContent = "0";
+        document.getElementById("sumRevenue").textContent = "0.00";
+        return;
+    }
+    tbody.innerHTML = "";
+    let sumSpend = 0, sumCost = 0, sumPurchase = 0, sumRevenue = 0;
+    adData.forEach((e, i) => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${e.date}</td>
+                <td>${e.account_name}</td>
+                <td>${e.account_id}</td>
+                <td>${e.owner}</td>
+                <td>${e.status}</td>
+                <td>${(+e.spend_total).toFixed(2)}</td>
+                <td>${(+e.cost_per_purchase).toFixed(2)}</td>
+                <td>${e.purchases}</td>
+                <td>${(+e.revenue).toFixed(2)}</td>
+                <td>${(+e.roas).toFixed(2)}</td>
+                <td>
+                    <button class="btn btn-sm btn-warning me-1" onclick="editEntry(${i})" title="แก้ไข">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteEntry(${i})" title="ลบ">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>`;
+        sumSpend += +e.spend_total;
+        sumCost += +e.cost_per_purchase;
+        sumPurchase += +e.purchases;
+        sumRevenue += +e.revenue;
+    });
+    document.getElementById("sumSpend").textContent = sumSpend.toFixed(2);
+    document.getElementById("avgCost").textContent = (adData.length ? sumCost / adData.length : 0).toFixed(2);
+    document.getElementById("sumPurchase").textContent = sumPurchase;
+    document.getElementById("sumRevenue").textContent = sumRevenue.toFixed(2);
 }
 
 async function addOwner() {
-  const name = document.getElementById("newOwner").value.trim();
-  if (!name) return;
-  const { error } = await _supabase.from("ad_owners").insert([{ name }]);
-  if (error) return alert("เพิ่มไม่สำเร็จ");
-  document.getElementById("newOwner").value = "";
-  loadOwners();
+    const name = document.getElementById("newOwner").value.trim();
+    if (!name) {
+        alert("กรุณากรอกชื่อเจ้าของบัญชี");
+        return;
+    }
+    const { error } = await _supabase.from("ad_owners").insert([{ name }]);
+    if (error) {
+        alert("เพิ่มไม่สำเร็จ: " + error.message);
+        return;
+    }
+    document.getElementById("newOwner").value = "";
+    loadOwners();
+    // After adding an owner, it's good practice to also refresh history or owners dropdowns
+    loadHistory();
 }
 
 async function removeOwner(name) {
-  if (!confirm("ลบเจ้าของบัญชีนี้?")) return;
-  await _supabase.from("ad_owners").delete().eq("name", name);
-  loadOwners();
+    if (!confirm(`ยืนยันการลบเจ้าของบัญชี "${name}"? ข้อมูลโฆษณาที่เกี่ยวข้องจะไม่ถูกลบ`)) return;
+    const { error } = await _supabase.from("ad_owners").delete().eq("name", name);
+    if (error) {
+        alert("ลบไม่สำเร็จ: " + error.message);
+        return;
+    }
+    loadOwners();
+    loadHistory(); // Reload history to update filters if the deleted owner was selected
 }
 
 function editEntry(i) {
-  const e = adData[i];
-  document.getElementById("editId").value = e.id;
-  date.value = e.date;
-  accountName.value = e.account_name;
-  accountId.value = e.account_id;
-  owner.value = e.owner;
-  status.value = e.status;
-  spendTotal.value = e.spend_total;
-  costPerPurchase.value = e.cost_per_purchase;
-  purchases.value = e.purchases;
-  revenue.value = e.revenue;
-  roas.value = e.roas;
-  window.scrollTo({ top: 0, behavior: "smooth" });
+    const e = adData[i];
+    document.getElementById("editId").value = e.id;
+    document.getElementById("date").value = e.date;
+    document.getElementById("accountName").value = e.account_name;
+    document.getElementById("accountId").value = e.account_id;
+    document.getElementById("owner").value = e.owner;
+    document.getElementById("status").value = e.status;
+    document.getElementById("spendTotal").value = e.spend_total;
+    document.getElementById("costPerPurchase").value = e.cost_per_purchase;
+    document.getElementById("purchases").value = e.purchases;
+    document.getElementById("revenue").value = e.revenue;
+    document.getElementById("roas").value = e.roas;
+    window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function deleteEntry(i) {
-  if (!confirm("ลบข้อมูลนี้?")) return;
-  const id = adData[i].id;
-  lastDeletedEntry = adData[i]; // เก็บข้อมูลก่อนลบเผื่อ Undo
-  const { error } = await _supabase.from("ad_history").delete().eq("id", id);
-  if (error) {
-    alert("ลบข้อมูลไม่สำเร็จ: " + error.message);
-    lastDeletedEntry = null;
-    return;
-  }
-  loadHistory();
-  showUndoButton(true);
+    if (!confirm("ยืนยันการลบข้อมูลนี้?")) return;
+    const id = adData[i].id;
+    lastDeletedEntry = adData[i]; // Store data for undo
+    const { error } = await _supabase.from("ad_history").delete().eq("id", id);
+    if (error) {
+        alert("ลบข้อมูลไม่สำเร็จ: " + error.message);
+        lastDeletedEntry = null;
+        return;
+    }
+    loadHistory();
+    populateAccountNamesFilter(); // Refresh account names in filter after deletion
+    showUndoButton(true);
 }
 
 document.getElementById("undoBtn").addEventListener("click", async () => {
-  if (!lastDeletedEntry) return;
-  const { error } = await _supabase.from("ad_history").insert([lastDeletedEntry]);
-  if (error) return alert("คืนข้อมูลไม่สำเร็จ: " + error.message);
-  lastDeletedEntry = null;
-  showUndoButton(false);
-  loadHistory();
+    if (!lastDeletedEntry) return;
+    const { error } = await _supabase.from("ad_history").insert([lastDeletedEntry]);
+    if (error) {
+        alert("คืนข้อมูลไม่สำเร็จ: " + error.message);
+        return;
+    }
+    lastDeletedEntry = null;
+    showUndoButton(false);
+    loadHistory();
+    populateAccountNamesFilter(); // Refresh account names in filter after undo
 });
 
 document.getElementById("adForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const id = document.getElementById("editId").value;
-  const entry = {
-    date: date.value,
-    account_name: accountName.value,
-    account_id: accountId.value,
-    owner: owner.value,
-    status: status.value,
-    spend_total: parseFloat(spendTotal.value) || 0,
-    cost_per_purchase: parseFloat(costPerPurchase.value) || 0,
-    purchases: parseInt(purchases.value) || 0,
-    revenue: parseFloat(revenue.value) || 0,
-    roas: parseFloat(roas.value) || 0,
-  };
-  if (id) await _supabase.from("ad_history").update(entry).eq("id", id);
-  else await _supabase.from("ad_history").insert([entry]);
-  document.getElementById("adForm").reset();
-  document.getElementById("editId").value = "";
-  loadHistory();
+    e.preventDefault();
+    const id = document.getElementById("editId").value;
+    const entry = {
+        date: document.getElementById("date").value,
+        account_name: document.getElementById("accountName").value,
+        account_id: document.getElementById("accountId").value,
+        owner: document.getElementById("owner").value,
+        status: document.getElementById("status").value,
+        spend_total: parseFloat(document.getElementById("spendTotal").value) || 0,
+        cost_per_purchase: parseFloat(document.getElementById("costPerPurchase").value) || 0,
+        purchases: parseInt(document.getElementById("purchases").value) || 0,
+        revenue: parseFloat(document.getElementById("revenue").value) || 0,
+        roas: parseFloat(document.getElementById("roas").value) || 0,
+    };
+
+    let error;
+    if (id) {
+        ({ error } = await _supabase.from("ad_history").update(entry).eq("id", id));
+    } else {
+        ({ error } = await _supabase.from("ad_history").insert([entry]));
+    }
+
+    if (error) {
+        alert("บันทึกข้อมูลไม่สำเร็จ: " + error.message);
+        return;
+    }
+
+    document.getElementById("adForm").reset();
+    document.getElementById("editId").value = "";
+    loadHistory();
+    populateAccountNamesFilter(); // Refresh account names in filter after new entry or update
 });
 
 document.getElementById("btnAddOwner").addEventListener("click", addOwner);
 document.getElementById("filterOwner").addEventListener("change", loadHistory);
+document.getElementById("filterAccountName").addEventListener("change", loadHistory);
 
 loadOwners();
+populateAccountNamesFilter();
 loadHistory();
 loadHistoryVisibility();
 </script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const loggedInUser = localStorage.getItem('loggedInUser');
-      if (!loggedInUser) {
-        // ถ้าไม่มีข้อมูลผู้ใช้ใน localStorage ให้พาไปหน้า login.html
-        window.location.href = 'login.html';
-      }
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (!loggedInUser) {
+            window.location.href = 'login.html';
+        }
     });
 </script>
 </body>
