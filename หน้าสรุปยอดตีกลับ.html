@@ -49,10 +49,10 @@
                 </svg>
             </a>
         </div>
-        <h2 class="mb-4">📈 สรุปยอดรวมรายเดือนจาก Supabase</h2>
+        <h2 class="mb-4">📈 สรุปยอดรวมตีกลับรายเดือน</h2>
 
         <div class="mb-3">
-            <label for="merchantIdFilter" class="form-label">กรองด้วยรหัสร้านค้า (Merchant ID):</label>
+            <label for="merchantIdFilter" class="form-label">ร้านค้า</label>
             <select class="form-select" id="merchantIdFilter">
                 <option value="">-- แสดงทั้งหมด --</option>
             </select>
@@ -98,18 +98,21 @@
                     <table class="table table-bordered table-hover mb-0">
                         <thead class="table-dark">
                             <tr>
-                                <th>รหัสร้านค้า</th>
+                                <th>ร้านค้า</th>
                                 <th>ปี</th>
                                 <th>เดือน</th>
-                                <th>Quantity รวม</th>
-                                <th>ยอดขายรวม (บาท)</th>
-                                <th>จัดการ</th> </tr>
+                                <th>จำนวนตีกลับ</th>
+                                <th>ยอดตีกลับ</th>
+                                <th>จัดการ</th>
+                            </tr>
                         </thead>
                         <tbody id="monthlySummaryTableBody">
                             <tr>
                                 <td colspan="6" class="text-center text-muted">กำลังโหลดข้อมูล...</td>
                             </tr>
                         </tbody>
+                        <tfoot id="monthlySummaryTableFooter" class="table-light">
+                            </tfoot>
                     </table>
                 </div>
             </div>
@@ -125,8 +128,8 @@
                         <thead class="table-dark">
                             <tr>
                                 <th>Seller SKU</th>
-                                <th>Quantity รวม</th>
-                                <th>ยอดขายรวม (บาท)</th>
+                                <th>จำนวนตีกลับ</th>
+                                <th>ยอดตีกลับ</th>
                             </tr>
                         </thead>
                         <tbody id="skuDetailByMerchantTableBody">
@@ -220,6 +223,7 @@
         async function fetchAndDisplayAllSummaries() {
             document.getElementById('loadingStatus').style.display = 'block';
             document.getElementById('monthlySummaryTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-muted">กำลังดึงข้อมูลสรุปรายเดือน...</td></tr>`;
+            document.getElementById('monthlySummaryTableFooter').innerHTML = ''; // Clear footer
             document.getElementById('skuDetailByMerchantTableBody').innerHTML = `<tr><td colspan="3" class="text-center text-muted">กำลังโหลดข้อมูล SKU ทั้งหมด...</td></tr>`;
             document.getElementById('productQuantityTableBody').innerHTML = `<tr><td colspan="2" class="text-center text-muted">กำลังโหลดข้อมูลสินค้า...</td></tr>`;
             document.getElementById('downloadSummaryExcelBtn').style.display = 'none';
@@ -332,12 +336,17 @@
 
         function renderMonthlySummaryTable(data) {
             const tbody = document.getElementById('monthlySummaryTableBody');
+            const tfoot = document.getElementById('monthlySummaryTableFooter');
             tbody.innerHTML = ''; // Clear existing rows
+            tfoot.innerHTML = ''; // Clear existing footer
 
             if (data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">ไม่พบข้อมูลสรุปรายเดือน</td></tr>`;
                 return;
             }
+
+            let totalQuantitySum = 0;
+            let totalOrderAmountSum = 0;
 
             data.forEach(item => {
                 const tr = document.createElement('tr');
@@ -348,7 +357,7 @@
                     <td>${item.total_quantity_sum.toLocaleString()}</td>
                     <td>${item.total_order_amount_sum.toFixed(2).toLocaleString()}</td>
                     <td>
-                        <button class="btn btn-danger btn-sm" 
+                        <button class="btn btn-danger btn-sm"
                             onclick="deleteMonthlySummary('${item.merchant_id}', ${item.summary_year}, ${item.summary_month})">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
                                 <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
@@ -359,13 +368,25 @@
                     </td>
                 `;
                 tbody.appendChild(tr);
+
+                totalQuantitySum += item.total_quantity_sum;
+                totalOrderAmountSum += item.total_order_amount_sum;
             });
+
+            // Add total row to tfoot
+            const totalRow = document.createElement('tr');
+            totalRow.innerHTML = `
+                <th colspan="3" class="text-end">รวมยอดทั้งหมด:</th>
+                <th>${totalQuantitySum.toLocaleString()}</th>
+                <th>${totalOrderAmountSum.toFixed(2).toLocaleString()}</th>
+                <th></th> `;
+            tfoot.appendChild(totalRow);
         }
 
         // New function to delete monthly summary from Supabase
         async function deleteMonthlySummary(merchantId, year, month) {
             const confirmDelete = confirm(`คุณต้องการลบข้อมูลสรุปของรหัสร้านค้า ${merchantId} สำหรับเดือน ${getMonthName(month)} ปี ${year} ใช่หรือไม่? \n\nการดำเนินการนี้จะลบข้อมูล SKU ทั้งหมดของเดือนนี้ใน Supabase ด้วย!`);
-            
+
             if (!confirmDelete) {
                 return; // User cancelled
             }
@@ -548,8 +569,19 @@
                 item.total_quantity_sum,
                 item.total_order_amount_sum.toFixed(2)
             ]);
+
+            // Calculate totals for export
+            let totalQuantitySumExport = 0;
+            let totalOrderAmountSumExport = 0;
+            cachedMonthlySummaryData.forEach(item => {
+                totalQuantitySumExport += item.total_quantity_sum;
+                totalOrderAmountSumExport += item.total_order_amount_sum;
+            });
+            const monthlySummaryTotalsRow = ['', '', 'รวมยอดทั้งหมด:', totalQuantitySumExport, totalOrderAmountSumExport.toFixed(2)];
+
+
             if (monthlySummaryDataForExport.length > 0) {
-                const wsMonthlySummary = XLSX.utils.aoa_to_sheet([monthlySummaryHeader, ...monthlySummaryDataForExport]);
+                const wsMonthlySummary = XLSX.utils.aoa_to_sheet([monthlySummaryHeader, ...monthlySummaryDataForExport, monthlySummaryTotalsRow]);
                 XLSX.utils.book_append_sheet(wb, wsMonthlySummary, "สรุปยอดรายเดือน");
             } else {
                 const wsMonthlySummary = XLSX.utils.aoa_to_sheet([monthlySummaryHeader, ['ไม่มีข้อมูล']]);
