@@ -13,66 +13,66 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
-            background-color: #f0f2f5; /* สีพื้นหลังที่ดูสบายตาขึ้น */
-            font-family: 'Inter', sans-serif; /* ใช้ Font Inter */
+            background-color: #f0f2f5;
+            font-family: 'Inter', sans-serif;
             color: #333;
         }
         .container {
-            max-width: 1300px; /* เพิ่มความกว้างสูงสุดของ container */
+            max-width: 1300px;
         }
         .summary-card {
             min-width: 200px;
-            border-radius: 15px; /* มุมโค้งมนมากขึ้น */
-            box-shadow: 0 6px 15px rgba(0,0,0,0.08); /* เพิ่มเงาให้โดดเด่นขึ้น */
-            transition: transform 0.2s ease-in-out; /* เพิ่ม animation เล็กน้อย */
-            height: 100%; /* ทำให้ card สูงเท่ากัน */
+            border-radius: 15px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease-in-out;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .summary-card:hover {
-            transform: translateY(-5px); /* เลื่อนขึ้นเล็กน้อยเมื่อ hover */
+            transform: translateY(-5px);
         }
         .summary-card .card-body {
             padding: 1.5rem;
         }
         .filter-box {
-            border: none; /* ลบ border ออก */
-            border-radius: 15px; /* มุมโค้งมน */
-            padding: 30px; /* เพิ่ม padding */
+            border: none;
+            border-radius: 15px;
+            padding: 30px;
             background: #fff;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.08); /* เงาเดียวกันกับ Card */
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
         }
         .form-label {
-            font-weight: 600; /* ทำให้ label ดูเข้มขึ้น */
+            font-weight: 600;
             color: #555;
             margin-bottom: 0.5rem;
         }
         .form-select, .form-control {
-            border-radius: 10px; /* มุมโค้งมนสำหรับ input/select */
-            border-color: #ced4da; /* สีขอบ input */
+            border-radius: 10px;
+            border-color: #ced4da;
         }
         .month-checkboxes label {
-            margin-right: 15px; /* เพิ่มระยะห่างระหว่าง checkbox */
+            margin-right: 15px;
         }
         .card {
-            border-radius: 15px; /* มุมโค้งมน */
-            box-shadow: 0 6px 15px rgba(0,0,0,0.08); /* เพิ่มเงา */
-            border: none; /* ลบ border ของ card */
+            border-radius: 15px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+            border: none;
         }
         .card-header {
-            background-color: #f8f9fa; /* สีพื้นหลัง header ของ card */
-            border-bottom: 1px solid #e9ecef; /* เส้นแบ่งเบาๆ */
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
             padding: 1rem 1.5rem;
             font-size: 1.1rem;
             color: #333;
-            border-radius: 15px 15px 0 0 !important; /* มุมโค้งมนเฉพาะด้านบน */
+            border-radius: 15px 15px 0 0 !important;
         }
         .card-body {
             padding: 1.5rem;
         }
         .btn {
-            border-radius: 10px; /* มุมโค้งมนสำหรับปุ่ม */
+            border-radius: 10px;
             padding: 0.6rem 1.2rem;
             font-weight: 500;
         }
@@ -104,25 +104,25 @@
             margin-bottom: 0;
         }
         .table th, .table td {
-            padding: 0.9rem; /* เพิ่ม padding ในตาราง */
+            padding: 0.9rem;
             vertical-align: middle;
         }
         .table thead th {
-            border-bottom: 2px solid #dee2e6; /* เส้นใต้ header ตาราง */
+            border-bottom: 2px solid #dee2e6;
             font-weight: 600;
             color: #495057;
         }
         .table tbody tr:last-child td {
-            border-bottom: none; /* ไม่มีเส้นใต้ที่แถวสุดท้าย */
+            border-bottom: none;
         }
         .table-striped tbody tr:nth-of-type(odd) {
-            background-color: rgba(0,0,0,.02); /* สีแถบสลับที่ดูซอฟต์ลง */
+            background-color: rgba(0,0,0,.02);
         }
         .table-hover tbody tr:hover {
-            background-color: rgba(0,0,0,.05); /* สี hover ที่ดูนุ่มนวลขึ้น */
+            background-color: rgba(0,0,0,.05);
         }
         .modal-content {
-            border-radius: 15px; /* มุมโค้งมนสำหรับ Modal */
+            border-radius: 15px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.15);
         }
         .modal-header {
@@ -134,7 +134,7 @@
             padding: 1rem 1.5rem;
         }
         .text-primary {
-            color: #007bff !important; /* สีฟ้า Bootstrap primary */
+            color: #007bff !important;
         }
         .text-success {
             color: #28a745 !important;
@@ -145,16 +145,15 @@
         .fw-bold {
             font-weight: 700 !important;
         }
-        /* Custom styling for specific headers */
         .card-header.bg-success {
             background-color: #28a745 !important;
             border-radius: 15px 15px 0 0 !important;
         }
         .table-primary thead {
-            background-color: #e0f2ff; /* สีฟ้าอ่อนสำหรับ header ตาราง SKU */
+            background-color: #e0f2ff;
         }
         .table-success thead {
-            background-color: #d4edda; /* สีเขียวอ่อนสำหรับ header ตารางกระปุก */
+            background-color: #d4edda;
         }
     </style>
 </head>
@@ -170,7 +169,7 @@
         <h3 class="mb-4 fw-bold text-primary">รายงานยอดขายแต่ละร้าน</h3>
 
         <div class="filter-box mb-5">
-            <div class="row g-4 align-items-end"> 
+            <div class="row g-4 align-items-end">
                 <div class="col-md-3 col-lg-2">
                     <label class="form-label">เลือกปี</label>
                     <select id="yearSelect" class="form-select"></select>
@@ -178,12 +177,12 @@
 
                 <div class="col-md-9 col-lg-6">
                     <label class="form-label">เลือกเดือน (ตามระบบ)</label>
-                    <div class="d-flex flex-wrap gap-3" id="monthCheckboxes"></div> 
+                    <div class="d-flex flex-wrap gap-3" id="monthCheckboxes"></div>
                 </div>
 
                 <div class="col-md-6 col-lg-4">
                     <label class="form-label">เลือกช่วงวันที่</label>
-                    <div class="d-flex gap-2"> 
+                    <div class="d-flex gap-2">
                         <input type="date" id="startDate" class="form-control">
                         <input type="date" id="endDate" class="form-control">
                     </div>
@@ -195,14 +194,14 @@
                     </select>
                 </div>
 
-                <div class="col-md-12 col-lg-8 d-flex align-items-end justify-content-start gap-3"> 
+                <div class="col-md-12 col-lg-8 d-flex align-items-end justify-content-start gap-3">
                     <button class="btn btn-success" onclick="loadData()"><i class="bi bi-check-circle-fill"></i> ยืนยันการกรอง</button>
                     <button class="btn btn-outline-danger" onclick="resetFilter()"><i class="bi bi-x-circle-fill"></i> ล้างการกรอง</button>
                 </div>
             </div>
         </div>
 
-        <div class="row mb-5 g-4" id="summaryCards"></div> 
+        <div class="row mb-5 g-4" id="summaryCards"></div>
         <div class="card mb-5">
             <div class="card-header fw-bold">
                 <i class="bi bi-shop me-2"></i> สรุปยอดขายรวมแต่ละร้านค้า
@@ -247,6 +246,41 @@
             </div>
         </div>
 
+        <div class="card mt-5">
+            <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-day me-2"></i> รายละเอียดการขายรายวัน</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleVisibility('dailySalesTableBody', 'toggleDailySalesIcon')">
+                    <i id="toggleDailySalesIcon" class="bi bi-eye-slash-fill"></i>
+                </button>
+            </div>
+            <div class="card-body table-responsive d-none" id="dailySalesTableBody">
+                <table class="table table-bordered table-hover text-end align-middle table-striped">
+                    <thead class="table-primary text-center">
+                        <tr>
+                            <th>วันที่</th>
+                            <th>จำนวนการสั่งซื้อ</th>
+                            <th>จำนวนยอดยกเลิก</th>
+                            <th>ออเดอร์คงเหลือ</th>
+                            <th>ยอดขายรวม</th>
+                            <th>ยอดยกเลิก</th>
+                            <th>ยอดเงินคงเหลือ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailySalesTableBodyContent"></tbody>
+                    <tfoot class="table-dark fw-bold">
+                        <tr>
+                            <td class="text-center">รวม</td>
+                            <td id="totalDailyQty">0</td>
+                            <td id="totalDailyRet">0</td>
+                            <td id="totalDailyRemainingOrders">0</td>
+                            <td id="totalDailyAmt">฿0.00</td>
+                            <td id="totalDailyRef">฿0.00</td>
+                            <td id="totalDailyRemainingAmount">฿0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
         <div class="card p-4 mt-5">
             <div class="card-header fw-bold d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-box-seam me-2"></i> รายละเอียด SKU รายวัน</span>
@@ -341,7 +375,6 @@
         document.addEventListener("DOMContentLoaded", () => {
             const loggedInUser = localStorage.getItem('loggedInUser');
             if (!loggedInUser) {
-                // ถ้าไม่มีข้อมูลผู้ใช้ใน localStorage ให้พาไปหน้า login.html
                 window.location.href = 'login.html';
             }
         });
@@ -363,20 +396,19 @@
         const skuTableBody = document.getElementById("skuTableBody");
         const productJarTableHead = document.getElementById("productJarTableHead");
         const productJarTableBody = document.getElementById("productJarTableBody");
+        const dailySalesTableBodyContent = document.getElementById("dailySalesTableBodyContent");
 
         const aiAnalysisModal = new bootstrap.Modal(document.getElementById('aiAnalysisModal'));
         const aiAnalysisContent = document.getElementById('aiAnalysisContent');
 
-        let currentSKUDataForAnalysis = {}; // เก็บข้อมูล SKU ที่ถูกกรองและเรียงลำดับแล้ว
+        let currentSKUDataForAnalysis = {};
 
         const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
-        // Populate year dropdown
         for (let y = 2022; y <= new Date().getFullYear(); y++) {
             yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
         }
 
-        // Populate month checkboxes
         monthCheckboxes.innerHTML = monthNames.map((m, i) => `
             <div class='form-check'>
                 <input class='form-check-input month-check' type='checkbox' value='${i + 1}' id='m${i}'>
@@ -386,27 +418,22 @@
         function getSelectedMonths() {
             return Array.from(document.querySelectorAll(".month-check:checked")).map(el => parseInt(el.value));
         }
-        
-        // --- NEW FUNCTION: Get selected shops from multiple select ---
+
         function getSelectedShops() {
             const selectedOptions = Array.from(shopFilter.selectedOptions);
-            // ถ้ามี "ทั้งหมด" ถูกเลือก หรือไม่มีการเลือกอะไรเลย ให้ถือว่าเลือกทั้งหมด
             if (selectedOptions.some(option => option.value === "") || selectedOptions.length === 0) {
-                return []; // คืนค่าเป็น array ว่าง เพื่อให้ query ไม่กรอง shop_name
+                return [];
             }
             return selectedOptions.map(option => option.value);
         }
-        // --- END NEW FUNCTION ---
 
         function resetFilter() {
             document.querySelectorAll(".month-check").forEach(el => el.checked = false);
             startDateInput.value = "";
             endDateInput.value = "";
-            // --- MODIFIED: Clear all selections for multiple shop select ---
             Array.from(shopFilter.options).forEach(option => {
                 option.selected = false;
             });
-            // --- END MODIFIED ---
             searchSKUInput.value = "";
             sortOptionSelect.value = "";
             loadData();
@@ -416,7 +443,6 @@
             return num?.toLocaleString("th-TH", { minimumFractionDigits: 2 });
         }
 
-        // Function to toggle visibility
         function toggleVisibility(elementId, iconId) {
             const element = document.getElementById(elementId);
             const icon = document.getElementById(iconId);
@@ -432,7 +458,6 @@
             }
         }
 
-        // Function to parse product_description string into an array of { product, qty }
         function parseDescription(desc) {
             if (!desc) return [];
             const prefixRemoved = desc.replace(/^สินค้า\s*/, '');
@@ -446,10 +471,9 @@
                         qty: parseInt(m[2], 10)
                     };
                 } else {
-                    // Handle cases where format might be slightly off, e.g., just a product name without "กระปุก"
                     return {
                         product: part.trim(),
-                        qty: 0 // Default to 0 if quantity not found
+                        qty: 0
                     };
                 }
             });
@@ -458,14 +482,13 @@
         async function loadData() {
             const selectedYear = parseInt(yearSelect.value);
             const selectedMonths = getSelectedMonths();
-            const selectedShops = getSelectedShops(); // --- MODIFIED: Use new function ---
+            const selectedShops = getSelectedShops();
 
             let startDate, endDate;
 
             if (selectedMonths.length > 0) {
                 const minMonth = Math.min(...selectedMonths);
                 const maxMonth = Math.max(...selectedMonths);
-                // Adjust for your specific month range (26th of prev month to 25th of current month)
                 startDate = dayjs(`${selectedYear}-${String(minMonth).padStart(2, '0')}-26`).subtract(1, 'month').toDate();
                 endDate = dayjs(`${selectedYear}-${String(maxMonth).padStart(2, '0')}-25`).toDate();
             } else if (startDateInput.value && endDateInput.value) {
@@ -482,13 +505,11 @@
                 .gte("date", dayjs(startDate).format("YYYY-MM-DD"))
                 .lte("date", dayjs(endDate).format("YYYY-MM-DD"));
 
-            // --- MODIFIED: Use .in() for multiple shop selection ---
             if (selectedShops.length > 0) {
                 query = query.in("shop_name", selectedShops);
             }
-            // --- END MODIFIED ---
 
-            const { data, error } = await query; // data is sku_history entries
+            const { data, error } = await query;
 
             if (error) {
                 alert("โหลดข้อมูลผิดพลาด");
@@ -499,14 +520,14 @@
             renderShopList(data);
             renderTable(data);
             loadMonthlySummary(data);
+            renderDailySalesTable(data); // NEW: Call the new function
             renderSKUTable(data);
-            await renderProductJarTable(data); // Pass sku_history data here
+            await renderProductJarTable(data);
         }
 
         function renderShopList(data) {
             const uniqueShops = Array.from(new Set(data.map(d => d.shop_name).filter(Boolean)));
-            // Keep existing selections if any
-            const currentSelectedValues = getSelectedShops(); 
+            const currentSelectedValues = getSelectedShops();
 
             shopFilter.innerHTML = `<option value="">ทั้งหมด</option>` + uniqueShops.map(shop => {
                 const isSelected = currentSelectedValues.includes(shop) ? 'selected' : '';
@@ -648,6 +669,62 @@
             document.getElementById("totalMonthlyRemainingAmount").textContent = `฿${formatNumber(totalRemainingAmount)}`;
         }
 
+        // NEW: Daily Sales Table Function
+        function renderDailySalesTable(data) {
+            dailySalesTableBodyContent.innerHTML = "";
+
+            const dailySummary = {};
+            let totalDailyQty = 0, totalDailyRet = 0, totalDailyAmt = 0, totalDailyRef = 0;
+
+            data.forEach(entry => {
+                const date = dayjs(entry.date).format("DD/MM/YYYY");
+                if (!dailySummary[date]) {
+                    dailySummary[date] = { qty: 0, ret: 0, amt: 0, ref: 0 };
+                }
+
+                if (entry.skus && Array.isArray(entry.skus)) {
+                    entry.skus.forEach(sku => {
+                        dailySummary[date].qty += sku.qty || 0;
+                        dailySummary[date].ret += sku.ret || 0;
+                        dailySummary[date].amt += sku.amt || 0;
+                        dailySummary[date].ref += sku.ref || 0;
+                    });
+                }
+            });
+
+            // Sort by date ascending
+            const sortedDates = Object.keys(dailySummary).sort((a, b) => dayjs(a, "DD/MM/YYYY").diff(dayjs(b, "DD/MM/YYYY")));
+
+            sortedDates.forEach(date => {
+                const dailyData = dailySummary[date];
+                const remainingOrders = dailyData.qty - dailyData.ret;
+                const remainingAmount = dailyData.amt - dailyData.ref;
+
+                dailySalesTableBodyContent.innerHTML += `<tr>
+                    <td class="text-center">${date}</td>
+                    <td>${formatNumber(dailyData.qty)}</td>
+                    <td>${formatNumber(dailyData.ret)}</td>
+                    <td>${formatNumber(remainingOrders)}</td>
+                    <td>฿${formatNumber(dailyData.amt)}</td>
+                    <td>฿${formatNumber(dailyData.ref)}</td>
+                    <td>฿${formatNumber(remainingAmount)}</td>
+                </tr>`;
+
+                totalDailyQty += dailyData.qty;
+                totalDailyRet += dailyData.ret;
+                totalDailyAmt += dailyData.amt;
+                totalDailyRef += dailyData.ref;
+            });
+
+            document.getElementById("totalDailyQty").textContent = formatNumber(totalDailyQty);
+            document.getElementById("totalDailyRet").textContent = formatNumber(totalDailyRet);
+            document.getElementById("totalDailyRemainingOrders").textContent = formatNumber(totalDailyQty - totalDailyRet);
+            document.getElementById("totalDailyAmt").textContent = `฿${formatNumber(totalDailyAmt)}`;
+            document.getElementById("totalDailyRef").textContent = `฿${formatNumber(totalDailyRef)}`;
+            document.getElementById("totalDailyRemainingAmount").textContent = `฿${formatNumber(totalDailyAmt - totalDailyRef)}`;
+        }
+        // END NEW: Daily Sales Table Function
+
         function renderSKUTable(data) {
             skuTableBody.innerHTML = "";
 
@@ -680,12 +757,12 @@
                 skuEntries.sort((a, b) => b[1].amt - a[1].amt);
             }
 
-            currentSKUDataForAnalysis = Object.fromEntries(skuEntries); // เก็บข้อมูล SKU ที่ถูกกรองและเรียงลำดับแล้ว
+            currentSKUDataForAnalysis = Object.fromEntries(skuEntries);
 
-            let sumSkuQty = 0, sumSkuRet = 0, sumSkuAmt = 0, sumSkuRef = 0, sumSkuRemainingAmount = 0; // เพิ่ม sumSkuRemainingAmount
+            let sumSkuQty = 0, sumSkuRet = 0, sumSkuAmt = 0, sumSkuRef = 0, sumSkuRemainingAmount = 0;
 
             skuEntries.forEach(([sku, s]) => {
-                const remainingAmount = s.amt - s.ref; // คำนวณยอดเงินคงเหลือสำหรับแต่ละ SKU
+                const remainingAmount = s.amt - s.ref;
                 skuTableBody.innerHTML += `
                     <tr>
                         <td>${sku}</td>
@@ -700,28 +777,26 @@
                 sumSkuRet += s.ret;
                 sumSkuAmt += s.amt;
                 sumSkuRef += s.ref;
-                sumSkuRemainingAmount += remainingAmount; // รวม remainingAmount
+                sumSkuRemainingAmount += remainingAmount;
             });
 
             document.getElementById("sumSkuQty").textContent = formatNumber(sumSkuQty);
             document.getElementById("sumSkuReturn").textContent = formatNumber(sumSkuRet);
             document.getElementById("sumSkuAmount").textContent = formatNumber(sumSkuAmt);
             document.getElementById("sumSkuRefund").textContent = formatNumber(sumSkuRef);
-            document.getElementById("sumSkuRemainingAmount").textContent = formatNumber(sumSkuRemainingAmount); // แสดงสรุป remainingAmount
+            document.getElementById("sumSkuRemainingAmount").textContent = formatNumber(sumSkuRemainingAmount);
         }
 
-        // New function to load product names and render the "ยอดกระปุก" table header and body
-        async function renderProductJarTable(skuHistoryData) { // รับข้อมูล sku_history ที่ถูกกรองแล้ว
-            // 1. ดึงชื่อสินค้าทั้งหมดสำหรับหัวตาราง
+        async function renderProductJarTable(skuHistoryData) {
             const { data: productNamesData, error: productNamesError } = await client
                 .from('product_names')
                 .select('product_name')
-                .order('product_name', { ascending: true }); // ดึงชื่อสินค้าและเรียงลำดับ
+                .order('product_name', { ascending: true });
 
             if (productNamesError) {
                 console.error('Error loading product names for Jar Table:', productNamesError.message);
                 productJarTableHead.innerHTML = `<tr><th>ไม่สามารถโหลดข้อมูลสินค้าได้</th></tr>`;
-                productJarTableBody.innerHTML = `<tr><td colspan="1" class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`; // แสดงข้อผิดพลาดใน body ด้วย
+                productJarTableBody.innerHTML = `<tr><td colspan="1" class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`;
                 return;
             }
 
@@ -731,11 +806,9 @@
                 return;
             }
 
-            // สร้างหัวตาราง (<th>) จากชื่อสินค้าที่ได้มา
             const headerHtml = `<tr>${productNamesData.map(p => `<th>${p.product_name}</th>`).join('')}</tr>`;
             productJarTableHead.innerHTML = headerHtml;
 
-            // 2. ดึงข้อมูล SKU composition (product_description) จาก daily_sku_usage_skus
             const { data: skuCompositionData, error: skuCompositionError } = await client
                 .from('daily_sku_usage_skus')
                 .select('sku_name, product_description');
@@ -751,21 +824,20 @@
                 skuCompositionMap.set(item.sku_name, parseDescription(item.product_description));
             });
 
-            // 3. คำนวณยอดกระปุกรวมสำหรับแต่ละสินค้า
-            const totalJarCountsByProduct = new Map(); // Map เพื่อเก็บยอดกระปุกรวมของแต่ละ product_name
+            const totalJarCountsByProduct = new Map();
 
             skuHistoryData.forEach(historyEntry => {
                 if (historyEntry.skus && Array.isArray(historyEntry.skus)) {
                     historyEntry.skus.forEach(skuFromHistory => {
-                        const skuName = skuFromHistory.name; // SKU name จาก sku_history
-                        const skuOrderQty = skuFromHistory.qty || 0; // จำนวนการสั่งซื้อของ SKU นั้นๆ
+                        const skuName = skuFromHistory.name;
+                        const skuOrderQty = skuFromHistory.qty || 0;
 
                         const skuProducts = skuCompositionMap.get(skuName);
 
                         if (skuProducts) {
                             skuProducts.forEach(productDetail => {
                                 const productName = productDetail.product;
-                                const productJarQtyInSku = productDetail.qty; // จำนวนกระปุกของสินค้านี้ใน SKU นั้นๆ
+                                const productJarQtyInSku = productDetail.qty;
 
                                 const jarContribution = skuOrderQty * productJarQtyInSku;
 
@@ -779,7 +851,6 @@
                 }
             });
 
-            // 4. เตรียมข้อมูลสำหรับแถวตาราง "ยอดกระปุก"
             let rowHtml = '<tr>';
             productNamesData.forEach(product => {
                 const jarCount = totalJarCountsByProduct.get(product.product_name) || 0;
@@ -787,10 +858,9 @@
             });
             rowHtml += '</tr>';
 
-            productJarTableBody.innerHTML = rowHtml; // อัปเดต tbody
+            productJarTableBody.innerHTML = rowHtml;
         }
 
-        // Function for AI Analysis (Placeholder for actual AI integration)
         async function analyzeSKUSales() {
             aiAnalysisContent.innerHTML = `
                 <p class="text-center text-muted">กำลังวิเคราะห์ข้อมูล...</p>
@@ -802,18 +872,17 @@
             `;
             aiAnalysisModal.show();
 
-            // Simulate API call to an AI service
             setTimeout(async () => {
                 try {
                     const topSellingSKUs = Object.entries(currentSKUDataForAnalysis)
                         .sort((a, b) => b[1].amt - a[1].amt)
-                        .slice(0, 5) // Get top 5 SKUs by amount
+                        .slice(0, 5)
                         .map(([name, data]) => `${name} (ยอดขาย ฿${formatNumber(data.amt)}, จำนวน ${formatNumber(data.qty)} ชิ้น)`);
 
                     const lowestSellingSKUs = Object.entries(currentSKUDataForAnalysis)
                         .sort((a, b) => a[1].amt - b[1].amt)
-                        .filter(([name, data]) => data.amt > 0) // Filter out SKUs with 0 sales
-                        .slice(0, 5) // Get lowest 5 SKUs by amount
+                        .filter(([name, data]) => data.amt > 0)
+                        .slice(0, 5)
                         .map(([name, data]) => `${name} (ยอดขาย ฿${formatNumber(data.amt)}, จำนวน ${formatNumber(data.qty)} ชิ้น)`);
 
                     const analysisText = `
@@ -838,9 +907,8 @@
                     aiAnalysisContent.innerHTML = `<p class="text-danger">เกิดข้อผิดพลาดในการวิเคราะห์ข้อมูล: ${error.message}</p>`;
                     console.error("AI Analysis Error:", error);
                 }
-            }, 1500); // Simulate network delay
+            }, 1500);
         }
-
 
         window.addEventListener("DOMContentLoaded", () => {
             yearSelect.value = new Date().getFullYear();
