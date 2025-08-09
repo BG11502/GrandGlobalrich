@@ -201,7 +201,7 @@
     </div>
 
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 p-3 bg-white rounded-3 shadow-sm">
-        <div class="d-flex align-items-center gap-3 mb-2 mb-md-0">
+        <div class="d-flex flex-wrap align-items-center gap-3 mb-2 mb-md-0">
             <label class="form-label mb-0 fw-bold text-muted">กรอง:</label>
             <div class="d-flex align-items-center gap-2">
                 <label class="form-label mb-0">เจ้าของบัญชี</label>
@@ -212,6 +212,14 @@
                 <select id="filterAccountName" class="form-select form-select-sm w-auto">
                     <option value="ทั้งหมด">ทั้งหมด</option>
                 </select>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0">วันที่เริ่มต้น</label>
+                <input type="date" id="filterStartDate" class="form-control form-control-sm w-auto" />
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0">วันที่สิ้นสุด</label>
+                <input type="date" id="filterEndDate" class="form-control form-control-sm w-auto" />
             </div>
         </div>
         <div class="d-flex align-items-center gap-3">
@@ -262,257 +270,291 @@
 </div>
 
 <script>
-const supabaseUrl = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
-const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = 'https://vzxttbvwukpsxqdaulvo.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U';
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-let adData = [];
-let lastDeletedEntry = null;
+    let adData = [];
+    let lastDeletedEntry = null;
 
-const historyTableDiv = document.querySelector(".table-responsive");
-const toggleBtn = document.getElementById("toggleHistoryBtn");
-
-// โหลดสถานะจาก localStorage
-function loadHistoryVisibility() {
-    const visible = localStorage.getItem("historyVisible");
-    if (visible === "false") {
-        historyTableDiv.style.display = "none";
-        toggleBtn.textContent = "แสดงข้อมูลย้อนหลัง";
-        toggleBtn.querySelector('i').className = "bi bi-eye-fill me-1"; // Change icon to show
-    } else {
-        historyTableDiv.style.display = "block";
-        toggleBtn.textContent = "ซ่อนข้อมูลย้อนหลัง";
-        toggleBtn.querySelector('i').className = "bi bi-eye-slash-fill me-1"; // Change icon to hide
+    const historyTableDiv = document.querySelector(".table-responsive");
+    const toggleBtn = document.getElementById("toggleHistoryBtn");
+    
+    // Function to calculate ROAS
+    function calculateROAS() {
+        const spend = parseFloat(document.getElementById("spendTotal").value) || 0;
+        const revenue = parseFloat(document.getElementById("revenue").value) || 0;
+        const roas = spend > 0 ? (revenue / spend).toFixed(2) : 0;
+        document.getElementById("roas").value = roas;
     }
-}
 
-// บันทึกสถานะและ toggle
-toggleBtn.addEventListener("click", () => {
-    if (historyTableDiv.style.display === "none") {
-        historyTableDiv.style.display = "block";
-        toggleBtn.textContent = "ซ่อนข้อมูลย้อนหลัง";
-        toggleBtn.querySelector('i').className = "bi bi-eye-slash-fill me-1";
-        localStorage.setItem("historyVisible", "true");
-    } else {
-        historyTableDiv.style.display = "none";
-        toggleBtn.textContent = "แสดงข้อมูลย้อนหลัง";
-        toggleBtn.querySelector('i').className = "bi bi-eye-fill me-1";
-        localStorage.setItem("historyVisible", "false");
+    // Attach event listeners for ROAS calculation
+    document.getElementById("spendTotal").addEventListener("input", calculateROAS);
+    document.getElementById("revenue").addEventListener("input", calculateROAS);
+
+
+    function loadHistoryVisibility() {
+        const visible = localStorage.getItem("historyVisible");
+        if (visible === "false") {
+            historyTableDiv.style.display = "none";
+            toggleBtn.innerHTML = '<i class="bi bi-eye-fill me-1"></i> แสดงข้อมูลย้อนหลัง';
+        } else {
+            historyTableDiv.style.display = "block";
+            toggleBtn.innerHTML = '<i class="bi bi-eye-slash-fill me-1"></i> ซ่อนข้อมูลย้อนหลัง';
+        }
     }
-});
 
-function showUndoButton(show) {
-    const undoContainer = document.getElementById("undoContainer");
-    undoContainer.style.display = show ? "block" : "none";
-}
-
-async function loadOwners() {
-    const { data } = await _supabase.from('ad_owners').select('name');
-    const ownerSel = document.getElementById("owner");
-    const filterSel = document.getElementById("filterOwner");
-    const list = document.getElementById("ownerList");
-
-    ownerSel.innerHTML = `<option disabled selected value="">เลือกเจ้าของบัญชี</option>`; // Added empty value for initial selection
-    filterSel.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
-    list.innerHTML = "";
-
-    if (data) {
-        data.forEach((o) => {
-            ownerSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
-            filterSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
-            list.innerHTML += `<div class="badge bg-primary p-2 d-flex align-items-center me-2 mb-2">${o.name}
-                <button class="btn-close btn-close-white btn-sm ms-2" onclick="removeOwner('${o.name}')" aria-label="Remove"></button></div>`;
-        });
-    }
-}
-
-async function populateAccountNamesFilter() {
-    const { data } = await _supabase.from("ad_history").select("account_name");
-    const filterAccountNameSel = document.getElementById("filterAccountName");
-    filterAccountNameSel.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
-    if (data) {
-        const uniqueAccountNames = [...new Set(data.map(e => e.account_name))].sort();
-        uniqueAccountNames.forEach(name => {
-            filterAccountNameSel.innerHTML += `<option value="${name}">${name}</option>`;
-        });
-    }
-}
-
-async function loadHistory() {
-    const filterOwner = document.getElementById("filterOwner").value;
-    const filterAccountName = document.getElementById("filterAccountName").value;
-    let { data } = await _supabase.from("ad_history").select("*").order("date", { ascending: false });
-    adData = data || [];
-
-    if (filterOwner !== "ทั้งหมด") {
-        adData = adData.filter(e => e.owner === filterOwner);
-    }
-    if (filterAccountName !== "ทั้งหมด") {
-        adData = adData.filter(e => e.account_name === filterAccountName);
-    }
-    renderTable();
-    showUndoButton(lastDeletedEntry !== null);
-}
-
-function renderTable() {
-    const tbody = document.getElementById("historyBody");
-    if (adData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="text-muted py-4">ไม่มีข้อมูลที่ตรงกับตัวกรอง</td></tr>';
-        document.getElementById("sumSpend").textContent = "0.00";
-        document.getElementById("avgCost").textContent = "0.00";
-        document.getElementById("sumPurchase").textContent = "0";
-        document.getElementById("sumRevenue").textContent = "0.00";
-        return;
-    }
-    tbody.innerHTML = "";
-    let sumSpend = 0, sumCost = 0, sumPurchase = 0, sumRevenue = 0;
-    adData.forEach((e, i) => {
-        tbody.innerHTML += `
-            <tr>
-                <td>${e.date}</td>
-                <td>${e.account_name}</td>
-                <td>${e.account_id}</td>
-                <td>${e.owner}</td>
-                <td>${e.status}</td>
-                <td>${(+e.spend_total).toFixed(2)}</td>
-                <td>${(+e.cost_per_purchase).toFixed(2)}</td>
-                <td>${e.purchases}</td>
-                <td>${(+e.revenue).toFixed(2)}</td>
-                <td>${(+e.roas).toFixed(2)}</td>
-                <td>
-                    <button class="btn btn-sm btn-warning me-1" onclick="editEntry(${i})" title="แก้ไข">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteEntry(${i})" title="ลบ">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>`;
-        sumSpend += +e.spend_total;
-        sumCost += +e.cost_per_purchase;
-        sumPurchase += +e.purchases;
-        sumRevenue += +e.revenue;
+    toggleBtn.addEventListener("click", () => {
+        if (historyTableDiv.style.display === "none") {
+            historyTableDiv.style.display = "block";
+            toggleBtn.innerHTML = '<i class="bi bi-eye-slash-fill me-1"></i> ซ่อนข้อมูลย้อนหลัง';
+            localStorage.setItem("historyVisible", "true");
+        } else {
+            historyTableDiv.style.display = "none";
+            toggleBtn.innerHTML = '<i class="bi bi-eye-fill me-1"></i> แสดงข้อมูลย้อนหลัง';
+            localStorage.setItem("historyVisible", "false");
+        }
     });
-    document.getElementById("sumSpend").textContent = sumSpend.toFixed(2);
-    document.getElementById("avgCost").textContent = (adData.length ? sumCost / adData.length : 0).toFixed(2);
-    document.getElementById("sumPurchase").textContent = sumPurchase;
-    document.getElementById("sumRevenue").textContent = sumRevenue.toFixed(2);
-}
 
-async function addOwner() {
-    const name = document.getElementById("newOwner").value.trim();
-    if (!name) {
-        alert("กรุณากรอกชื่อเจ้าของบัญชี");
-        return;
+    function showUndoButton(show) {
+        const undoContainer = document.getElementById("undoContainer");
+        undoContainer.style.display = show ? "block" : "none";
     }
-    const { error } = await _supabase.from("ad_owners").insert([{ name }]);
-    if (error) {
-        alert("เพิ่มไม่สำเร็จ: " + error.message);
-        return;
+
+    async function loadOwners() {
+        const { data } = await _supabase.from('ad_owners').select('name');
+        const ownerSel = document.getElementById("owner");
+        const filterSel = document.getElementById("filterOwner");
+        const list = document.getElementById("ownerList");
+
+        ownerSel.innerHTML = `<option disabled selected value="">เลือกเจ้าของบัญชี</option>`;
+        filterSel.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
+        list.innerHTML = "";
+
+        if (data) {
+            data.forEach((o) => {
+                ownerSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
+                filterSel.innerHTML += `<option value="${o.name}">${o.name}</option>`;
+                list.innerHTML += `<div class="badge bg-primary p-2 d-flex align-items-center me-2 mb-2">${o.name}
+                    <button class="btn-close btn-close-white btn-sm ms-2" onclick="removeOwner('${o.name}')" aria-label="Remove"></button></div>`;
+            });
+        }
     }
-    document.getElementById("newOwner").value = "";
-    loadOwners();
-    // After adding an owner, it's good practice to also refresh history or owners dropdowns
-    loadHistory();
-}
 
-async function removeOwner(name) {
-    if (!confirm(`ยืนยันการลบเจ้าของบัญชี "${name}"? ข้อมูลโฆษณาที่เกี่ยวข้องจะไม่ถูกลบ`)) return;
-    const { error } = await _supabase.from("ad_owners").delete().eq("name", name);
-    if (error) {
-        alert("ลบไม่สำเร็จ: " + error.message);
-        return;
+    async function populateAccountNamesFilter() {
+        const { data } = await _supabase.from("ad_history").select("account_name");
+        const filterAccountNameSel = document.getElementById("filterAccountName");
+        filterAccountNameSel.innerHTML = `<option value="ทั้งหมด">ทั้งหมด</option>`;
+        if (data) {
+            const uniqueAccountNames = [...new Set(data.map(e => e.account_name))].sort();
+            uniqueAccountNames.forEach(name => {
+                filterAccountNameSel.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
     }
-    loadOwners();
-    loadHistory(); // Reload history to update filters if the deleted owner was selected
-}
 
-function editEntry(i) {
-    const e = adData[i];
-    document.getElementById("editId").value = e.id;
-    document.getElementById("date").value = e.date;
-    document.getElementById("accountName").value = e.account_name;
-    document.getElementById("accountId").value = e.account_id;
-    document.getElementById("owner").value = e.owner;
-    document.getElementById("status").value = e.status;
-    document.getElementById("spendTotal").value = e.spend_total;
-    document.getElementById("costPerPurchase").value = e.cost_per_purchase;
-    document.getElementById("purchases").value = e.purchases;
-    document.getElementById("revenue").value = e.revenue;
-    document.getElementById("roas").value = e.roas;
-    window.scrollTo({ top: 0, behavior: "smooth" });
-}
+    async function loadHistory() {
+        const filterOwner = document.getElementById("filterOwner").value;
+        const filterAccountName = document.getElementById("filterAccountName").value;
+        // เพิ่มตัวกรองวันที่
+        const filterStartDate = document.getElementById("filterStartDate").value;
+        const filterEndDate = document.getElementById("filterEndDate").value;
 
-async function deleteEntry(i) {
-    if (!confirm("ยืนยันการลบข้อมูลนี้?")) return;
-    const id = adData[i].id;
-    lastDeletedEntry = adData[i]; // Store data for undo
-    const { error } = await _supabase.from("ad_history").delete().eq("id", id);
-    if (error) {
-        alert("ลบข้อมูลไม่สำเร็จ: " + error.message);
+        let { data } = await _supabase.from("ad_history").select("*").order("date", { ascending: false });
+        adData = data || [];
+
+        if (filterOwner !== "ทั้งหมด") {
+            adData = adData.filter(e => e.owner === filterOwner);
+        }
+        if (filterAccountName !== "ทั้งหมด") {
+            adData = adData.filter(e => e.account_name === filterAccountName);
+        }
+        // ใช้ตัวกรองวันที่
+        if (filterStartDate) {
+            adData = adData.filter(e => e.date >= filterStartDate);
+        }
+        if (filterEndDate) {
+            adData = adData.filter(e => e.date <= filterEndDate);
+        }
+
+        renderTable();
+        showUndoButton(lastDeletedEntry !== null);
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById("historyBody");
+        if (adData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="11" class="text-muted py-4">ไม่มีข้อมูลที่ตรงกับตัวกรอง</td></tr>';
+            document.getElementById("sumSpend").textContent = "0.00";
+            document.getElementById("avgCost").textContent = "0.00";
+            document.getElementById("sumPurchase").textContent = "0";
+            document.getElementById("sumRevenue").textContent = "0.00";
+            return;
+        }
+        tbody.innerHTML = "";
+        let sumSpend = 0, sumPurchasesForAvg = 0, sumRevenue = 0;
+        adData.forEach((e, i) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${e.date}</td>
+                    <td>${e.account_name}</td>
+                    <td>${e.account_id}</td>
+                    <td>${e.owner}</td>
+                    <td><span class="badge ${e.status === 'ใช้งานปกติ' ? 'bg-success' : 'bg-danger'}">${e.status}</span></td>
+                    <td>${(+e.spend_total).toFixed(2)}</td>
+                    <td>${(+e.cost_per_purchase).toFixed(2)}</td>
+                    <td>${e.purchases}</td>
+                    <td>${(+e.revenue).toFixed(2)}</td>
+                    <td>${(+e.roas).toFixed(2)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-1" onclick="editEntry(${i})" title="แก้ไข">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteEntry(${i})" title="ลบ">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            sumSpend += +e.spend_total;
+            sumPurchasesForAvg += +e.purchases;
+            sumRevenue += +e.revenue;
+        });
+
+        const totalCostPerPurchase = adData.reduce((sum, e) => sum + (+e.cost_per_purchase), 0);
+
+        document.getElementById("sumSpend").textContent = sumSpend.toFixed(2);
+        document.getElementById("avgCost").textContent = (adData.length ? totalCostPerPurchase / adData.length : 0).toFixed(2);
+        document.getElementById("sumPurchase").textContent = sumPurchasesForAvg;
+        document.getElementById("sumRevenue").textContent = sumRevenue.toFixed(2);
+    }
+
+    async function addOwner() {
+        const name = document.getElementById("newOwner").value.trim();
+        if (!name) {
+            alert("กรุณากรอกชื่อเจ้าของบัญชี");
+            return;
+        }
+        const { error } = await _supabase.from("ad_owners").insert([{ name }]);
+        if (error) {
+            alert("เพิ่มไม่สำเร็จ: " + error.message);
+            return;
+        }
+        document.getElementById("newOwner").value = "";
+        await loadOwners();
+        await loadHistory();
+    }
+
+    async function removeOwner(name) {
+        if (!confirm(`ยืนยันการลบเจ้าของบัญชี "${name}"? ข้อมูลโฆษณาที่เกี่ยวข้องจะไม่ถูกลบ`)) return;
+        const { error } = await _supabase.from("ad_owners").delete().eq("name", name);
+        if (error) {
+            alert("ลบไม่สำเร็จ: " + error.message);
+            return;
+        }
+        await loadOwners();
+        await loadHistory();
+    }
+
+    function editEntry(i) {
+        const e = adData[i];
+        document.getElementById("editId").value = e.id;
+        document.getElementById("date").value = e.date;
+        document.getElementById("accountName").value = e.account_name;
+        document.getElementById("accountId").value = e.account_id;
+        document.getElementById("owner").value = e.owner;
+        document.getElementById("status").value = e.status;
+        document.getElementById("spendTotal").value = e.spend_total;
+        document.getElementById("costPerPurchase").value = e.cost_per_purchase;
+        document.getElementById("purchases").value = e.purchases;
+        document.getElementById("revenue").value = e.revenue;
+        document.getElementById("roas").value = e.roas;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function deleteEntry(i) {
+        if (!confirm("ยืนยันการลบข้อมูลนี้?")) return;
+        const id = adData[i].id;
+        lastDeletedEntry = adData[i];
+        const { error } = await _supabase.from("ad_history").delete().eq("id", id);
+        if (error) {
+            alert("ลบข้อมูลไม่สำเร็จ: " + error.message);
+            lastDeletedEntry = null;
+            return;
+        }
+        await loadHistory();
+        await populateAccountNamesFilter();
+        showUndoButton(true);
+    }
+
+    document.getElementById("undoBtn").addEventListener("click", async () => {
+        if (!lastDeletedEntry) return;
+        const { error } = await _supabase.from("ad_history").insert([lastDeletedEntry]);
+        if (error) {
+            alert("คืนข้อมูลไม่สำเร็จ: " + error.message);
+            return;
+        }
         lastDeletedEntry = null;
-        return;
-    }
+        showUndoButton(false);
+        await loadHistory();
+        await populateAccountNamesFilter();
+    });
+
+    document.getElementById("adForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("editId").value;
+        const entry = {
+            date: document.getElementById("date").value,
+            account_name: document.getElementById("accountName").value,
+            account_id: document.getElementById("accountId").value,
+            owner: document.getElementById("owner").value,
+            status: document.getElementById("status").value,
+            spend_total: parseFloat(document.getElementById("spendTotal").value) || 0,
+            cost_per_purchase: parseFloat(document.getElementById("costPerPurchase").value) || 0,
+            purchases: parseInt(document.getElementById("purchases").value) || 0,
+            revenue: parseFloat(document.getElementById("revenue").value) || 0,
+            roas: parseFloat(document.getElementById("roas").value) || 0,
+        };
+
+        let error;
+        if (id) {
+            ({ error } = await _supabase.from("ad_history").update(entry).eq("id", id));
+        } else {
+            ({ error } = await _supabase.from("ad_history").insert([entry]));
+        }
+
+        if (error) {
+            alert("บันทึกข้อมูลไม่สำเร็จ: " + error.message);
+            return;
+        }
+
+        document.getElementById("adForm").reset();
+        document.getElementById("editId").value = "";
+        await loadHistory();
+        await populateAccountNamesFilter();
+        calculateROAS(); // Reset ROAS field after submission
+    });
+
+    document.getElementById("btnAddOwner").addEventListener("click", addOwner);
+    document.getElementById("filterOwner").addEventListener("change", loadHistory);
+    document.getElementById("filterAccountName").addEventListener("change", loadHistory);
+    // เพิ่ม Event Listener สำหรับตัวกรองวันที่
+    document.getElementById("filterStartDate").addEventListener("change", loadHistory);
+    document.getElementById("filterEndDate").addEventListener("change", loadHistory);
+    
+
+    // Add event listener to "สรุปยอดค่าแอด" button for login check
+    document.querySelector('a[href="หน้าสรุปยอดค่าแอด.html"]').addEventListener('click', (e) => {
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (!loggedInUser) {
+            e.preventDefault(); // Prevent default navigation
+            window.location.href = 'login.html';
+        }
+    });
+
+    loadOwners();
+    populateAccountNamesFilter();
     loadHistory();
-    populateAccountNamesFilter(); // Refresh account names in filter after deletion
-    showUndoButton(true);
-}
-
-document.getElementById("undoBtn").addEventListener("click", async () => {
-    if (!lastDeletedEntry) return;
-    const { error } = await _supabase.from("ad_history").insert([lastDeletedEntry]);
-    if (error) {
-        alert("คืนข้อมูลไม่สำเร็จ: " + error.message);
-        return;
-    }
-    lastDeletedEntry = null;
-    showUndoButton(false);
-    loadHistory();
-    populateAccountNamesFilter(); // Refresh account names in filter after undo
-});
-
-document.getElementById("adForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const id = document.getElementById("editId").value;
-    const entry = {
-        date: document.getElementById("date").value,
-        account_name: document.getElementById("accountName").value,
-        account_id: document.getElementById("accountId").value,
-        owner: document.getElementById("owner").value,
-        status: document.getElementById("status").value,
-        spend_total: parseFloat(document.getElementById("spendTotal").value) || 0,
-        cost_per_purchase: parseFloat(document.getElementById("costPerPurchase").value) || 0,
-        purchases: parseInt(document.getElementById("purchases").value) || 0,
-        revenue: parseFloat(document.getElementById("revenue").value) || 0,
-        roas: parseFloat(document.getElementById("roas").value) || 0,
-    };
-
-    let error;
-    if (id) {
-        ({ error } = await _supabase.from("ad_history").update(entry).eq("id", id));
-    } else {
-        ({ error } = await _supabase.from("ad_history").insert([entry]));
-    }
-
-    if (error) {
-        alert("บันทึกข้อมูลไม่สำเร็จ: " + error.message);
-        return;
-    }
-
-    document.getElementById("adForm").reset();
-    document.getElementById("editId").value = "";
-    loadHistory();
-    populateAccountNamesFilter(); // Refresh account names in filter after new entry or update
-});
-
-document.getElementById("btnAddOwner").addEventListener("click", addOwner);
-document.getElementById("filterOwner").addEventListener("change", loadHistory);
-document.getElementById("filterAccountName").addEventListener("change", loadHistory);
-
-loadOwners();
-populateAccountNamesFilter();
-loadHistory();
-loadHistoryVisibility();
+    loadHistoryVisibility();
 </script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
