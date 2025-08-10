@@ -11,6 +11,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
+    <script>dayjs.extend(dayjs_plugin_customParseFormat);</script>
     <style>
         body {
             background-color: #f0f2f5;
@@ -520,7 +522,7 @@
             renderShopList(data);
             renderTable(data);
             loadMonthlySummary(data);
-            renderDailySalesTable(data); // NEW: Call the new function
+            renderDailySalesTable(data);
             renderSKUTable(data);
             await renderProductJarTable(data);
         }
@@ -620,8 +622,8 @@
 
             data.forEach(entry => {
                 const date = dayjs(entry.date);
-                let monthIndex = date.date() >= 26 ? date.month() + 1 : date.month();
-                if (monthIndex === 12) monthIndex = 0;
+                let monthIndex = date.date() >= 26 ? date.month() : date.month() - 1;
+                if (monthIndex < 0) monthIndex = 11;
 
                 if (entry.skus && Array.isArray(entry.skus)) {
                     entry.skus.forEach(sku => {
@@ -669,61 +671,69 @@
             document.getElementById("totalMonthlyRemainingAmount").textContent = `฿${formatNumber(totalRemainingAmount)}`;
         }
 
-        // NEW: Daily Sales Table Function
+        // โค้ดที่ได้รับการแก้ไขสำหรับการเรียงวันที่ในตารางรายวัน
         function renderDailySalesTable(data) {
-            dailySalesTableBodyContent.innerHTML = "";
+    dailySalesTableBodyContent.innerHTML = "";
 
-            const dailySummary = {};
-            let totalDailyQty = 0, totalDailyRet = 0, totalDailyAmt = 0, totalDailyRef = 0;
+    const dailySummary = {};
+    let totalDailyQty = 0, totalDailyRet = 0, totalDailyAmt = 0, totalDailyRef = 0;
 
-            data.forEach(entry => {
-                const date = dayjs(entry.date).format("DD/MM/YYYY");
-                if (!dailySummary[date]) {
-                    dailySummary[date] = { qty: 0, ret: 0, amt: 0, ref: 0 };
-                }
-
-                if (entry.skus && Array.isArray(entry.skus)) {
-                    entry.skus.forEach(sku => {
-                        dailySummary[date].qty += sku.qty || 0;
-                        dailySummary[date].ret += sku.ret || 0;
-                        dailySummary[date].amt += sku.amt || 0;
-                        dailySummary[date].ref += sku.ref || 0;
-                    });
-                }
-            });
-
-            // Sort by date ascending
-            const sortedDates = Object.keys(dailySummary).sort((a, b) => dayjs(a, "DD/MM/YYYY").diff(dayjs(b, "DD/MM/YYYY")));
-
-            sortedDates.forEach(date => {
-                const dailyData = dailySummary[date];
-                const remainingOrders = dailyData.qty - dailyData.ret;
-                const remainingAmount = dailyData.amt - dailyData.ref;
-
-                dailySalesTableBodyContent.innerHTML += `<tr>
-                    <td class="text-center">${date}</td>
-                    <td>${formatNumber(dailyData.qty)}</td>
-                    <td>${formatNumber(dailyData.ret)}</td>
-                    <td>${formatNumber(remainingOrders)}</td>
-                    <td>฿${formatNumber(dailyData.amt)}</td>
-                    <td>฿${formatNumber(dailyData.ref)}</td>
-                    <td>฿${formatNumber(remainingAmount)}</td>
-                </tr>`;
-
-                totalDailyQty += dailyData.qty;
-                totalDailyRet += dailyData.ret;
-                totalDailyAmt += dailyData.amt;
-                totalDailyRef += dailyData.ref;
-            });
-
-            document.getElementById("totalDailyQty").textContent = formatNumber(totalDailyQty);
-            document.getElementById("totalDailyRet").textContent = formatNumber(totalDailyRet);
-            document.getElementById("totalDailyRemainingOrders").textContent = formatNumber(totalDailyQty - totalDailyRet);
-            document.getElementById("totalDailyAmt").textContent = `฿${formatNumber(totalDailyAmt)}`;
-            document.getElementById("totalDailyRef").textContent = `฿${formatNumber(totalDailyRef)}`;
-            document.getElementById("totalDailyRemainingAmount").textContent = `฿${formatNumber(totalDailyAmt - totalDailyRef)}`;
+    data.forEach(entry => {
+        const date = dayjs(entry.date).format("DD/MM/YYYY");
+        if (!dailySummary[date]) {
+            dailySummary[date] = { qty: 0, ret: 0, amt: 0, ref: 0 };
         }
-        // END NEW: Daily Sales Table Function
+
+        if (entry.skus && Array.isArray(entry.skus)) {
+            entry.skus.forEach(sku => {
+                dailySummary[date].qty += sku.qty || 0;
+                dailySummary[date].ret += sku.ret || 0;
+                dailySummary[date].amt += sku.amt || 0;
+                dailySummary[date].ref += sku.ref || 0;
+            });
+        }
+    });
+
+    // เรียงวันที่ตามรอบ 26 → 25
+    const sortedDates = Object.keys(dailySummary).sort((a, b) => {
+        const da = dayjs(a, "DD/MM/YYYY");
+        const db = dayjs(b, "DD/MM/YYYY");
+
+        const adjustA = da.date() >= 26 ? da : da.add(1, "year");
+        const adjustB = db.date() >= 26 ? db : db.add(1, "year");
+
+        return adjustA.valueOf() - adjustB.valueOf();
+    });
+
+    sortedDates.forEach(date => {
+        const dailyData = dailySummary[date];
+        const remainingOrders = dailyData.qty - dailyData.ret;
+        const remainingAmount = dailyData.amt - dailyData.ref;
+
+        dailySalesTableBodyContent.innerHTML += `<tr>
+            <td class="text-center">${date}</td>
+            <td>${formatNumber(dailyData.qty)}</td>
+            <td>${formatNumber(dailyData.ret)}</td>
+            <td>${formatNumber(remainingOrders)}</td>
+            <td>฿${formatNumber(dailyData.amt)}</td>
+            <td>฿${formatNumber(dailyData.ref)}</td>
+            <td>฿${formatNumber(remainingAmount)}</td>
+        </tr>`;
+
+        totalDailyQty += dailyData.qty;
+        totalDailyRet += dailyData.ret;
+        totalDailyAmt += dailyData.amt;
+        totalDailyRef += dailyData.ref;
+    });
+
+    document.getElementById("totalDailyQty").textContent = formatNumber(totalDailyQty);
+    document.getElementById("totalDailyRet").textContent = formatNumber(totalDailyRet);
+    document.getElementById("totalDailyRemainingOrders").textContent = formatNumber(totalDailyQty - totalDailyRet);
+    document.getElementById("totalDailyAmt").textContent = `฿${formatNumber(totalDailyAmt)}`;
+    document.getElementById("totalDailyRef").textContent = `฿${formatNumber(totalDailyRef)}`;
+    document.getElementById("totalDailyRemainingAmount").textContent = `฿${formatNumber(totalDailyAmt - totalDailyRef)}`;
+}
+
 
         function renderSKUTable(data) {
             skuTableBody.innerHTML = "";
