@@ -406,11 +406,13 @@
         let currentSKUDataForAnalysis = {};
 
         const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        const fullMonthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
         for (let y = 2022; y <= new Date().getFullYear(); y++) {
             yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
         }
 
+        // แก้ไข: แสดงชื่อเดือนใน Checkbox เป็นชื่อเดือนเต็ม
         monthCheckboxes.innerHTML = monthNames.map((m, i) => `
             <div class='form-check'>
                 <input class='form-check-input month-check' type='checkbox' value='${i + 1}' id='m${i}'>
@@ -489,23 +491,36 @@
             let startDate, endDate;
 
             if (selectedMonths.length > 0) {
-                const minMonth = Math.min(...selectedMonths);
-                const maxMonth = Math.max(...selectedMonths);
-                startDate = dayjs(`${selectedYear}-${String(minMonth).padStart(2, '0')}-26`).subtract(1, 'month').toDate();
-                endDate = dayjs(`${selectedYear}-${String(maxMonth).padStart(2, '0')}-25`).toDate();
+                // แก้ไข: ปรับช่วงวันที่ให้ตรงกับรอบ 26-25 โดยใช้เดือนที่เลือกเป็นเดือนที่สิ้นสุดรอบ
+                const endMonth = selectedMonths[0]; // ใช้เดือนที่เลือกเป็นเดือนสิ้นสุดของรอบ
+                let endYear = selectedYear;
+                let startYear = selectedYear;
+
+                // กำหนด startDate
+                if (endMonth === 1) { // มกราคม
+                    startYear = selectedYear - 1;
+                    startDate = dayjs(`${startYear}-12-26`).format("YYYY-MM-DD");
+                } else {
+                    startDate = dayjs(`${selectedYear}-${endMonth - 1}-26`).format("YYYY-MM-DD");
+                }
+                
+                // กำหนด endDate
+                endDate = dayjs(`${endYear}-${endMonth}-25`).format("YYYY-MM-DD");
+
             } else if (startDateInput.value && endDateInput.value) {
-                startDate = new Date(startDateInput.value);
-                endDate = new Date(endDateInput.value);
+                startDate = startDateInput.value;
+                endDate = endDateInput.value;
             } else {
-                startDate = new Date(selectedYear, 0, 1);
-                endDate = new Date(selectedYear, 11, 31);
+                // กรณีไม่เลือกเดือนและช่วงวันที่ ให้ใช้ทั้งปี
+                startDate = dayjs(`${selectedYear}-01-01`).format("YYYY-MM-DD");
+                endDate = dayjs(`${selectedYear}-12-31`).format("YYYY-MM-DD");
             }
 
             let query = client
                 .from("sku_history")
                 .select("*")
-                .gte("date", dayjs(startDate).format("YYYY-MM-DD"))
-                .lte("date", dayjs(endDate).format("YYYY-MM-DD"));
+                .gte("date", startDate)
+                .lte("date", endDate);
 
             if (selectedShops.length > 0) {
                 query = query.in("shop_name", selectedShops);
@@ -617,49 +632,68 @@
             document.getElementById("shopTableContainer").innerHTML = html;
         }
 
+        // แก้ไข: ปรับการแสดงผลชื่อเดือนในตารางให้ตรงกับเดือนที่เลือกและรอบตัดยอดอย่างถูกต้อง
         function loadMonthlySummary(data) {
-            const monthlySummary = Array.from({ length: 12 }, (_, i) => ({ month: i, qty: 0, ret: 0, amt: 0, ref: 0, remainingOrders: 0, remainingAmount: 0 }));
+            const monthlySummary = {};
 
             data.forEach(entry => {
                 const date = dayjs(entry.date);
-                let monthIndex = date.date() >= 26 ? date.month() : date.month() - 1;
-                if (monthIndex < 0) monthIndex = 11;
+                
+                // ตรรกะใหม่: ถ้าวันที่ > 25 ให้ใช้เดือนถัดไปเป็นเดือนรายงาน, ถ้าไม่ ให้ใช้เดือนปัจจุบัน
+                let reportingMonthDate = date;
+                if (date.date() > 25) {
+                    reportingMonthDate = date.add(1, 'month');
+                }
+                const reportingMonthKey = reportingMonthDate.format('YYYY-MM');
+
+                if (!monthlySummary[reportingMonthKey]) {
+                    monthlySummary[reportingMonthKey] = {
+                        qty: 0,
+                        ret: 0,
+                        amt: 0,
+                        ref: 0
+                    };
+                }
 
                 if (entry.skus && Array.isArray(entry.skus)) {
                     entry.skus.forEach(sku => {
-                        monthlySummary[monthIndex].qty += sku.qty || 0;
-                        monthlySummary[monthIndex].ret += sku.ret || 0;
-                        monthlySummary[monthIndex].amt += sku.amt || 0;
-                        monthlySummary[monthIndex].ref += sku.ref || 0;
+                        monthlySummary[reportingMonthKey].qty += sku.qty || 0;
+                        monthlySummary[reportingMonthKey].ret += sku.ret || 0;
+                        monthlySummary[reportingMonthKey].amt += sku.amt || 0;
+                        monthlySummary[reportingMonthKey].ref += sku.ref || 0;
                     });
                 }
-            });
-
-            monthlySummary.forEach(m => {
-                m.remainingOrders = m.qty - m.ret;
-                m.remainingAmount = m.amt - m.ref;
             });
 
             monthlySummaryTableBody.innerHTML = "";
 
             let totalQty = 0, totalRet = 0, totalAmt = 0, totalRef = 0, totalRemainingOrders = 0, totalRemainingAmount = 0;
 
-            monthlySummary.forEach((m, i) => {
-                totalQty += m.qty;
-                totalRet += m.ret;
-                totalAmt += m.amt;
-                totalRef += m.ref;
-                totalRemainingOrders += m.remainingOrders;
-                totalRemainingAmount += m.remainingAmount;
+            const sortedMonths = Object.keys(monthlySummary).sort();
+
+            sortedMonths.forEach(key => {
+                const monthData = monthlySummary[key];
+                const remainingOrders = monthData.qty - monthData.ret;
+                const remainingAmount = monthData.amt - monthData.ref;
+
+                totalQty += monthData.qty;
+                totalRet += monthData.ret;
+                totalAmt += monthData.amt;
+                totalRef += monthData.ref;
+                totalRemainingOrders += remainingOrders;
+                totalRemainingAmount += remainingAmount;
+                
+                const monthIndex = dayjs(key).month();
+                const displayMonth = monthNames[monthIndex];
 
                 monthlySummaryTableBody.innerHTML += `<tr>
-                    <td class="text-center">${monthNames[i]}</td>
-                    <td>${formatNumber(m.qty)}</td>
-                    <td>${formatNumber(m.ret)}</td>
-                    <td>${formatNumber(m.remainingOrders)}</td>
-                    <td>฿${formatNumber(m.amt)}</td>
-                    <td>฿${formatNumber(m.ref)}</td>
-                    <td>฿${formatNumber(m.remainingAmount)}</td>
+                    <td class="text-center">${displayMonth}</td>
+                    <td>${formatNumber(monthData.qty)}</td>
+                    <td>${formatNumber(monthData.ret)}</td>
+                    <td>${formatNumber(remainingOrders)}</td>
+                    <td>฿${formatNumber(monthData.amt)}</td>
+                    <td>฿${formatNumber(monthData.ref)}</td>
+                    <td>฿${formatNumber(remainingAmount)}</td>
                 </tr>`;
             });
 
@@ -671,68 +705,69 @@
             document.getElementById("totalMonthlyRemainingAmount").textContent = `฿${formatNumber(totalRemainingAmount)}`;
         }
 
+
         // โค้ดที่ได้รับการแก้ไขสำหรับการเรียงวันที่ในตารางรายวัน
         function renderDailySalesTable(data) {
-    dailySalesTableBodyContent.innerHTML = "";
+            dailySalesTableBodyContent.innerHTML = "";
 
-    const dailySummary = {};
-    let totalDailyQty = 0, totalDailyRet = 0, totalDailyAmt = 0, totalDailyRef = 0;
+            const dailySummary = {};
+            let totalDailyQty = 0, totalDailyRet = 0, totalDailyAmt = 0, totalDailyRef = 0;
 
-    data.forEach(entry => {
-        const date = dayjs(entry.date).format("DD/MM/YYYY");
-        if (!dailySummary[date]) {
-            dailySummary[date] = { qty: 0, ret: 0, amt: 0, ref: 0 };
-        }
+            data.forEach(entry => {
+                const date = dayjs(entry.date).format("DD/MM/YYYY");
+                if (!dailySummary[date]) {
+                    dailySummary[date] = { qty: 0, ret: 0, amt: 0, ref: 0 };
+                }
 
-        if (entry.skus && Array.isArray(entry.skus)) {
-            entry.skus.forEach(sku => {
-                dailySummary[date].qty += sku.qty || 0;
-                dailySummary[date].ret += sku.ret || 0;
-                dailySummary[date].amt += sku.amt || 0;
-                dailySummary[date].ref += sku.ref || 0;
+                if (entry.skus && Array.isArray(entry.skus)) {
+                    entry.skus.forEach(sku => {
+                        dailySummary[date].qty += sku.qty || 0;
+                        dailySummary[date].ret += sku.ret || 0;
+                        dailySummary[date].amt += sku.amt || 0;
+                        dailySummary[date].ref += sku.ref || 0;
+                    });
+                }
             });
+
+            // เรียงวันที่ตามรอบ 26 → 25
+            const sortedDates = Object.keys(dailySummary).sort((a, b) => {
+                const da = dayjs(a, "DD/MM/YYYY");
+                const db = dayjs(b, "DD/MM/YYYY");
+
+                const adjustA = da.date() >= 26 ? da : da.add(1, "month");
+                const adjustB = db.date() >= 26 ? db : db.add(1, "month");
+
+                return adjustA.valueOf() - adjustB.valueOf();
+            });
+
+            sortedDates.forEach(date => {
+                const dailyData = dailySummary[date];
+                const remainingOrders = dailyData.qty - dailyData.ret;
+                const remainingAmount = dailyData.amt - dailyData.ref;
+
+                dailySalesTableBodyContent.innerHTML += `<tr>
+                    <td class="text-center">${date}</td>
+                    <td>${formatNumber(dailyData.qty)}</td>
+                    <td>${formatNumber(dailyData.ret)}</td>
+                    <td>${formatNumber(remainingOrders)}</td>
+                    <td>฿${formatNumber(dailyData.amt)}</td>
+                    <td>฿${formatNumber(dailyData.ref)}</td>
+                    <td>฿${formatNumber(remainingAmount)}</td>
+                </tr>`;
+
+                totalDailyQty += dailyData.qty;
+                totalDailyRet += dailyData.ret;
+                totalDailyAmt += dailyData.amt;
+                totalDailyRef += dailyData.ref;
+            });
+
+            document.getElementById("totalDailyQty").textContent = formatNumber(totalDailyQty);
+            document.getElementById("totalDailyRet").textContent = formatNumber(totalDailyRet);
+            document.getElementById("totalDailyRemainingOrders").textContent = formatNumber(totalDailyQty - totalDailyRet);
+            document.getElementById("totalDailyAmt").textContent = `฿${formatNumber(totalDailyAmt)}`;
+            document.getElementById("totalDailyRef").textContent = `฿${formatNumber(totalDailyRef)}`;
+            document.getElementById("totalDailyRemainingAmount").textContent = `฿${formatNumber(totalDailyAmt - totalDailyRef)}`;
         }
-    });
-
-    // เรียงวันที่ตามรอบ 26 → 25
-    const sortedDates = Object.keys(dailySummary).sort((a, b) => {
-        const da = dayjs(a, "DD/MM/YYYY");
-        const db = dayjs(b, "DD/MM/YYYY");
-
-        const adjustA = da.date() >= 26 ? da : da.add(1, "year");
-        const adjustB = db.date() >= 26 ? db : db.add(1, "year");
-
-        return adjustA.valueOf() - adjustB.valueOf();
-    });
-
-    sortedDates.forEach(date => {
-        const dailyData = dailySummary[date];
-        const remainingOrders = dailyData.qty - dailyData.ret;
-        const remainingAmount = dailyData.amt - dailyData.ref;
-
-        dailySalesTableBodyContent.innerHTML += `<tr>
-            <td class="text-center">${date}</td>
-            <td>${formatNumber(dailyData.qty)}</td>
-            <td>${formatNumber(dailyData.ret)}</td>
-            <td>${formatNumber(remainingOrders)}</td>
-            <td>฿${formatNumber(dailyData.amt)}</td>
-            <td>฿${formatNumber(dailyData.ref)}</td>
-            <td>฿${formatNumber(remainingAmount)}</td>
-        </tr>`;
-
-        totalDailyQty += dailyData.qty;
-        totalDailyRet += dailyData.ret;
-        totalDailyAmt += dailyData.amt;
-        totalDailyRef += dailyData.ref;
-    });
-
-    document.getElementById("totalDailyQty").textContent = formatNumber(totalDailyQty);
-    document.getElementById("totalDailyRet").textContent = formatNumber(totalDailyRet);
-    document.getElementById("totalDailyRemainingOrders").textContent = formatNumber(totalDailyQty - totalDailyRet);
-    document.getElementById("totalDailyAmt").textContent = `฿${formatNumber(totalDailyAmt)}`;
-    document.getElementById("totalDailyRef").textContent = `฿${formatNumber(totalDailyRef)}`;
-    document.getElementById("totalDailyRemainingAmount").textContent = `฿${formatNumber(totalDailyAmt - totalDailyRef)}`;
-}
 
 
         function renderSKUTable(data) {
