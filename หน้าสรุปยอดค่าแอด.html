@@ -1,571 +1,618 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const loggedInUser = localStorage.getItem('loggedInUser');
-      if (!loggedInUser) {
-        // ถ้าไม่มีข้อมูลผู้ใช้ใน localStorage ให้พาไปหน้า login.html
-        window.location.href = 'login.html';
-      }
-    });
-</script>
-  <meta charset="UTF-8" />
-  <title>รายงานสรุปค่าแอด</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <style>
-    .card-summary .card-body {
-      text-align: center;
-      font-size: 1.25rem;
-      background-color: #f8f9fa;
-    }
-    .table thead th {
-      background-color: #f1f1f1;
-    }
-    .text-money {
-      font-weight: bold;
-      color: #198754; /* Green for positive values / money */
-    }
-    .text-refund {
-      color: #dc3545; /* Red for negative values / refunds */
-      font-weight: bold;
-    }
-    .text-roas {
-        font-weight: bold;
-        color: #007bff; /* Blue */
-    }
-    /* เพิ่มการจัดสไตล์สำหรับหัวข้อตารางของแต่ละเจ้าของบัญชี */
-    .owner-summary-header {
-        background-color: #e9ecef; /* สีพื้นหลังอ่อนๆ */
-        padding: 10px 15px;
-        margin-bottom: 15px;
-        border-radius: .25rem;
-        border: 1px solid #dee2e6;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>รายงานค่าโฆษณา - Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #f0f2f5; /* Light grey background */
+            color: #333;
+        }
+        .header-section {
+            background: linear-gradient(135deg, #007bff, #0056b3); /* Blue gradient */
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 3rem;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .header-section h1 {
+            font-weight: 600;
+            font-size: 2.8rem;
+            margin-bottom: 0.5rem;
+        }
+        .header-section p {
+            font-weight: 300;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .filter-card .card-body {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem; /* Space between filter items */
+            align-items: flex-end; /* Align items to the bottom */
+        }
+        .filter-item {
+            flex-grow: 1; /* Allow items to grow */
+            min-width: 150px; /* Minimum width for filter dropdowns */
+        }
+        .filter-item label {
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 0.5rem;
+        }
+        .filter-item .form-select,
+        .filter-item .form-control {
+            border-radius: 8px;
+            border-color: #ced4da;
+            transition: all 0.2s ease-in-out;
+        }
+        .filter-item .form-select:focus,
+        .filter-item .form-control:focus {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.75rem;
+        }
+        .action-buttons .btn {
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .action-buttons .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        .action-buttons .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .action-buttons .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .action-buttons .btn-secondary:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
+        }
+
+        .summary-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            background-color: white;
+            min-height: 120px; /* Ensure consistent height */
+        }
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+        .summary-card .card-body {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .summary-card .total-value {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+            line-height: 1; /* Reduce line height */
+        }
+        .summary-card .total-label {
+            font-size: 0.9rem;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .summary-card .bi {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #007bff; /* Default icon color */
+        }
+        .summary-card .text-primary .bi { color: #007bff; }
+        .summary-card .text-success .bi { color: #28a745; }
+        .summary-card .text-info .bi { color: #17a2b8; }
+        .summary-card .roas-value.is-good { color: #28a745 !important; }
+        .summary-card .roas-value { color: #dc3545 !important; }
+
+
+        .grouped-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            background-color: white;
+        }
+        .grouped-card .card-header-grouped {
+            background-color: #e9ecef; /* Lighter grey for header */
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 1.1rem;
+        }
+        .grouped-card .card-header-grouped span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .grouped-card .card-header-grouped .float-end {
+            font-size: 0.9rem;
+            color: #555;
+        }
+        .grouped-card .card-body {
+            padding: 0; /* Remove padding from card body to make table full width */
+        }
+        .grouped-card .table {
+            margin-bottom: 0; /* Remove margin from table */
+        }
+        .grouped-card .table thead {
+            background-color: #f8f9fa; /* Light background for table header */
+            color: #495057;
+            font-weight: 500;
+        }
+        .grouped-card .table th, .grouped-card .table td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+        .grouped-card .table tbody tr:hover {
+            background-color: #f2f2f2; /* Hover effect for table rows */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 767.98px) {
+            .header-section {
+                padding: 2rem 0;
+                margin-bottom: 2rem;
+            }
+            .header-section h1 {
+                font-size: 2rem;
+            }
+            .header-section p {
+                font-size: 1rem;
+            }
+            .filter-card .card-body {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-item {
+                min-width: unset;
+                width: 100%;
+            }
+            .action-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+            .action-buttons .btn {
+                width: 100%;
+            }
+            .grouped-card .card-header-grouped {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            .grouped-card .card-header-grouped .float-end {
+                width: 100%;
+                text-align: left;
+                margin-top: 0.5rem;
+            }
+        }
+    </style>
 </head>
-<body>
-<div class="container py-4">
-  <h2 class="text-center mb-4 text-primary">📊 รายงานสรุปค่าแอด</h2>
-  <div class="d-flex justify-content-between mb-4">
-    <a href="ค่าแอด.html" class="btn btn-outline-primary btn-icon"><i class="bi bi-house-door"></i> สรุปยอดค่าแอด </a>
-    <a href="index.html" class="btn btn-outline-secondary btn-icon"><i class="bi bi-graph-up-arrow"></i> หน้าหลัก</a>
-  </div>
-
-  <div class="card p-3 mb-4">
-    <div class="row g-2 align-items-end">
-      <div class="col-md-2">
-        <label class="form-label">เลือกปี</label>
-        <select id="yearSelect" class="form-select"></select>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">เลือกเดือน (หลายเดือน)</label>
-        <div class="d-flex flex-wrap gap-1" id="monthCheckboxes">
-          </div>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">เลือกเจ้าของบัญชี</label>
-        <select id="ownerSelect" class="form-select">
-          <option value="">ทั้งหมด</option>
-          </select>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">เลือกชื่อบัญชี</label>
-        <select id="accountNameSelect" class="form-select">
-          <option value="">ทั้งหมด</option>
-        </select>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">เลือกช่วงวันที่</label>
-        <div class="input-group">
-          <input type="date" id="startDate" class="form-control" />
-          <input type="date" id="endDate" class="form-control" />
+<body class="bg-light">
+    <div class="header-section text-center">
+        <div class="container">
+            <h1 class="mb-2"><i class="bi bi-bar-chart-fill me-2"></i> รายงานค่าโฆษณา</h1>
+            <p class="lead">สรุปยอดและข้อมูลจาก ad_history เพื่อการวิเคราะห์</p>
         </div>
-      </div>
-      <div class="col-md-12 d-flex gap-2 justify-content-end mt-2">
-        <button class="btn btn-success" onclick="applyFilter()"><i class="bi bi-filter-circle"></i> ยืนยันการกรอง</button>
-        <button class="btn btn-danger" onclick="resetFilter()"><i class="bi bi-x-circle"></i> ล้างการกรอง</button>
-      </div>
     </div>
-  </div>
 
-  <div class="row row-cols-1 row-cols-md-5 g-3 mb-4 card-summary">
-    <div class="col"><div class="card"><div class="card-body">ยอดรวมค่าแอด<br><span id="totalSpend" class="text-money">฿0.00</span></div></div></div>
-    <div class="col"><div class="card"><div class="card-body">จำนวนซื้อ<br><span id="totalPurchasesSummary">0</span></div></div></div>
-    <div class="col"><div class="card"><div class="card-body">ต้นทุน/ซื้อ<br><span id="avgCostPerPurchaseSummary" class="text-money">฿0.00</span></div></div></div>
-    <div class="col"><div class="card"><div class="card-body">รายได้<br><span id="totalRevenueSummary" class="text-money">฿0.00</span></div></div></div>
-    <div class="col"><div class="card"><div class="card-body">ROAS<br><span id="totalRoas" class="text-roas">0.00</span></div></div></div>
-  </div>
+    <div class="container py-4">
+        <div class="card shadow-sm mb-5 filter-card rounded-3">
+            <div class="card-body">
+                <div class="filter-item">
+                    <label for="yearFilter" class="form-label">เลือกปี:</label>
+                    <select id="yearFilter" class="form-select">
+                        <option value="all">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="monthFilter" class="form-label">เลือกเดือน:</label>
+                    <select id="monthFilter" class="form-select">
+                        <option value="all">ทั้งหมด</option>
+                        <option value="01">มกราคม</option>
+                        <option value="02">กุมภาพันธ์</option>
+                        <option value="03">มีนาคม</option>
+                        <option value="04">เมษายน</option>
+                        <option value="05">พฤษภาคม</option>
+                        <option value="06">มิถุนายน</option>
+                        <option value="07">กรกฎาคม</option>
+                        <option value="08">สิงหาคม</option>
+                        <option value="09">กันยายน</option>
+                        <option value="10">ตุลาคม</option>
+                        <option value="11">พฤศจิกายน</option>
+                        <option value="12">ธันวาคม</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="dateFromFilter" class="form-label">จากวันที่:</label>
+                    <input type="date" id="dateFromFilter" class="form-control">
+                </div>
+                <div class="filter-item">
+                    <label for="dateToFilter" class="form-label">ถึงวันที่:</label>
+                    <input type="date" id="dateToFilter" class="form-control">
+                </div>
+                <div class="filter-item">
+                    <label for="ownerFilter" class="form-label">ผู้ดูแล:</label>
+                    <select id="ownerFilter" class="form-select">
+                        <option value="all">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="accountFilter" class="form-label">ชื่อบัญชี:</label>
+                    <select id="accountFilter" class="form-select">
+                        <option value="all">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="action-buttons">
+                    <button id="clearFiltersBtn" class="btn btn-secondary">
+                        <i class="bi bi-x-circle-fill me-2"></i> ล้างตัวกรอง
+                    </button>
+                    <button id="index.html" class="btn btn-primary">
+                        <i class="bi bi-house-door-fill me-2"></i> กลับหน้าหลัก
+                    </button>
+                </div>
+            </div>
+        </div>
 
-  <div id="ownerSummaryContainer">
-      </div>
+        <h2 class="mb-4 fw-bold text-dark">สรุปภาพรวมทั้งหมด</h2>
+        <div class="row g-4 mb-5" id="overallSummary">
+            
+</div>
 
-  <div class="card p-3 mb-4">
-    <h5 class="text-secondary mb-3 d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-calendar3"></i> ยอดรวมค่ารายเดือน (ตัดยอด 26-25)</span>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#monthlyTableCollapse" aria-expanded="false" aria-controls="monthlyTableCollapse"> <i class="bi bi-eye"></i> ซ่อน/แสดง
-        </button>
-    </h5>
-    <div class="collapse" id="monthlyTableCollapse"> <div class="table-responsive">
-        <table class="table table-striped text-center align-middle">
-          <thead>
-            <tr>
-              <th>เดือน</th><th>ค่าแอด</th><th>จำนวนซื้อ</th><th>รายได้</th><th>กำไรเบื้องต้น</th>
-            </tr>
-          </thead>
-          <tbody id="monthlyTableBody"></tbody>
-        </table>
-      </div>
+        <h2 class="mb-4 fw-bold text-dark">รายละเอียดตามผู้ดูแลบัญชี</h2>
+        <div id="groupedTablesContainer">
+            
+</div>
     </div>
-  </div>
-  <div class="card p-3">
-    <h5 class="text-secondary mb-3 d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-calendar-day"></i> ยอดรวมค่ารายวัน</span>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#dailyTableCollapse" aria-expanded="false" aria-controls="dailyTableCollapse"> <i class="bi bi-eye"></i> ซ่อน/แสดง
-        </button>
-    </h5>
-    <div class="collapse" id="dailyTableCollapse"> <div class="table-responsive">
-        <table class="table table-striped text-center align-middle">
-          <thead>
-            <tr>
-              <th>วันที่</th>
-              <th>ค่าแอด</th>
-              <th>จำนวนซื้อ</th>
-              <th>ต้นทุน/ซื้อ</th>
-              <th>รายได้</th>
-              <th>ROAS</th>
-            </tr>
-          </thead>
-          <tbody id="dailyTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const _supabase = supabase.createClient(
+            "https://vzxttbvwukpsxqdaulvo.supabase.co",
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U"
+        );
+        let rawData = [];
+        
+        // **แก้ไข URL นี้ให้เป็นหน้าหลักของคุณ**
+        const HOME_URL = "https://your-homepage-url.com"; 
 
-<script>
-const _supabase = supabase.createClient(
-  "https://vzxttbvwukpsxqdaulvo.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6eHR0YnZ3dWtwc3hxZGF1bHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5MTI2MzIsImV4cCI6MjA2NzQ4ODYzMn0.s05eiK-WITEq_uEVH4zXNkPG0KUk4Fmv4Yo5jZizm2U"
-);
+        async function loadDataAndRender() {
+            const { data, error } = await _supabase
+                .from("ad_history")
+                .select("date, account_name, owner, status, spend_total, purchases, revenue, roas")
+                .order("date", { ascending: false });
 
-let allData = []; // Store all loaded data
-
-document.addEventListener('DOMContentLoaded', () => {
-    initUI();
-    loadData();
-});
-
-function initUI() {
-  const y = new Date().getFullYear();
-  const yearSelect = document.getElementById('yearSelect');
-  // สร้าง option สำหรับปีปัจจุบันและ 5 ปีก่อนหน้า
-  for (let i = y - 5; i <= y; i++) {
-    yearSelect.innerHTML += `<option value="${i}" ${i === y ? "selected" : ""}>${i}</option>`;
-  }
-
-  const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-  const monthBox = document.getElementById('monthCheckboxes');
-  // สร้าง checkboxes สำหรับเดือนต่างๆ
-  monthNames.forEach((m, i) => {
-    monthBox.innerHTML += `<div class="form-check me-2">
-      <input class="form-check-input" type="checkbox" value="${i+1}" id="m${i+1}">
-      <label class="form-check-label" for="m${i+1}">${m}</label></div>`;
-  });
-}
-
-/**
- * Populates the owner filter dropdown with unique owner names.
- * @param {Array} data - The dataset to extract owner names from.
- */
-function populateOwnerFilter(data) {
-  const ownerSelect = document.getElementById('ownerSelect');
-  const owners = new Set(); // ใช้ Set เพื่อเก็บชื่อเจ้าของที่ไม่ซ้ำกัน
-
-  data.forEach(item => {
-    if (item.owner) { // ตรวจสอบว่ามีค่า owner
-      owners.add(item.owner);
-    }
-  });
-
-  // ล้าง option เก่าออกทั้งหมด ยกเว้น "ทั้งหมด"
-  ownerSelect.innerHTML = '<option value="">ทั้งหมด</option>';
-
-  // เพิ่ม owner ที่ไม่ซ้ำกันเข้าไปใน select box โดยเรียงตามตัวอักษร
-  Array.from(owners).sort().forEach(owner => {
-    const option = document.createElement('option');
-    option.value = owner;
-    option.textContent = owner;
-    ownerSelect.appendChild(option);
-  });
-}
-
-/**
- * Populates the account name filter dropdown with unique account names.
- * @param {Array} data - The dataset to extract account names from.
- */
-function populateAccountNameFilter(data) {
-  const accountNameSelect = document.getElementById('accountNameSelect');
-  const accountNames = new Set(); // ใช้ Set เพื่อเก็บชื่อบัญชีที่ไม่ซ้ำกัน
-
-  data.forEach(item => {
-    if (item.account_name) { // ตรวจสอบว่ามีค่า account_name
-      accountNames.add(item.account_name);
-    }
-  });
-
-  // ล้าง option เก่าออกทั้งหมด ยกเว้น "ทั้งหมด"
-  accountNameSelect.innerHTML = '<option value="">ทั้งหมด</option>';
-  
-  // เพิ่ม account name ที่ไม่ซ้ำกันเข้าไปใน select box โดยเรียงตามตัวอักษร
-  Array.from(accountNames).sort().forEach(accountName => {
-    const option = document.createElement('option');
-    option.value = accountName;
-    option.textContent = accountName;
-    accountNameSelect.appendChild(option);
-  });
-}
-
-async function loadData() {
-  const { data, error } = await _supabase.from('ad_history').select('*');
-  if (error) {
-    console.error("โหลดข้อมูลไม่สำเร็จ:", error);
-    return alert("โหลดข้อมูลไม่สำเร็จ: " + error.message);
-  }
-  allData = data || [];
-  populateOwnerFilter(allData); // เรียกใช้เพื่อ populate owner filter
-  populateAccountNameFilter(allData); // เรียกใช้ฟังก์ชันใหม่ที่นี่
-  applyFilter(); // กรองข้อมูลและแสดงผลหลังจากโหลดเสร็จ
-}
-
-function applyFilter() {
-  const selectedYear = parseInt(document.getElementById('yearSelect').value);
-  const selectedMonths = [...document.querySelectorAll('#monthCheckboxes input:checked')].map(c => +c.value);
-  const startDateInput = document.getElementById("startDate").value;
-  const endDateInput = document.getElementById("endDate").value;
-  const selectedOwner = document.getElementById('ownerSelect').value; // ดึงค่า owner ที่เลือก
-  const selectedAccountName = document.getElementById('accountNameSelect').value; // ดึงค่าชื่อบัญชีที่เลือก
-
-  let filtered = allData.filter(d => {
-    const dataDate = new Date(d.date);
-
-    // Filter by owner
-    if (selectedOwner && d.owner !== selectedOwner) {
-      return false; // Skip if owner doesn't match
-    }
-
-    // Filter by account name
-    if (selectedAccountName && d.account_name !== selectedAccountName) {
-        return false; // Skip if account name doesn't match
-    }
-
-    // Check custom date range if provided (Highest priority)
-    if (startDateInput && endDateInput) {
-      const startDate = new Date(startDateInput);
-      const endDate = new Date(endDateInput);
-      // Set end date to end of day to include full day
-      endDate.setHours(23, 59, 59, 999);
-      return dataDate >= startDate && dataDate <= endDate;
-    } else if (startDateInput) {
-      const startDate = new Date(startDateInput);
-      return dataDate >= startDate;
-    } else if (endDateInput) {
-      const endDate = new Date(endDateInput);
-      endDate.setHours(23, 59, 59, 999);
-      return dataDate <= endDate;
-    } else {
-        // --- 26th-25th Monthly Cycle Logic ---
-        // If no custom date range, apply year and custom month (26-25) logic
-
-        const reportMonthsToFilter = selectedMonths.length > 0 ? selectedMonths : Array.from({length: 12}, (_, i) => i + 1); // Use all months if none selected
-
-        for (const reportMonth of reportMonthsToFilter) {
-            let cycleStartYear = selectedYear;
-            let cycleEndYear = selectedYear;
-            let cycleStartMonth = reportMonth - 1; // 0-indexed for Date object
-            let cycleEndMonth = reportMonth - 1;  // 0-indexed for Date object
-
-            // Adjust start month/year for the 26th-25th cycle
-            if (reportMonth === 1) { // If "January" (month 1), cycle starts Dec 26 of previous year
-                cycleStartMonth = 11; // December
-                cycleStartYear = selectedYear - 1;
-            } else {
-                cycleStartMonth = reportMonth - 2; // e.g., if reportMonth is Feb (2), cycle starts Jan (1)
+            if (error) {
+                console.error("โหลดข้อมูลผิดพลาด:", error.message);
+                document.getElementById("overallSummary").innerHTML = `<div class="col-12 text-center text-danger">ไม่สามารถโหลดข้อมูลได้: ${error.message}</div>`;
+                document.getElementById("groupedTablesContainer").innerHTML = ``;
+                return;
             }
 
-            const cycleStartDate = new Date(cycleStartYear, cycleStartMonth, 26);
-            const cycleEndDate = new Date(cycleEndYear, cycleEndMonth, 25);
-            // Set time to end of day for cycleEndDate to include full day
-            cycleEndDate.setHours(23, 59, 59, 999);
+            rawData = data;
+            populateYearFilter(data);
+            populateOwnerFilter(data);
+            updateAccountFilter();
+            filterAndRenderData();
+        }
 
-            if (dataDate >= cycleStartDate && dataDate <= cycleEndDate) {
-                return true; // Data point matches one of the selected/all 26-25 month cycles
+        function populateYearFilter(data) {
+            const years = [...new Set(data.map(d => new Date(d.date).getFullYear()))].sort((a, b) => b - a);
+            const yearFilter = document.getElementById("yearFilter");
+            yearFilter.innerHTML = '<option value="all">ทั้งหมด</option>';
+            years.forEach(year => {
+                const option = document.createElement("option");
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+        }
+        
+        function populateOwnerFilter(data) {
+            const owners = [...new Set(data.map(d => d.owner).filter(o => o))].sort();
+            const ownerFilter = document.getElementById("ownerFilter");
+            ownerFilter.innerHTML = '<option value="all">ทั้งหมด</option>';
+            owners.forEach(owner => {
+                const option = document.createElement("option");
+                option.value = owner;
+                option.textContent = owner;
+                ownerFilter.appendChild(option);
+            });
+        }
+        
+        function updateAccountFilter() {
+            const owner = document.getElementById("ownerFilter").value;
+            const accountFilter = document.getElementById("accountFilter");
+            accountFilter.innerHTML = '<option value="all">ทั้งหมด</option>';
+            
+            let filteredAccountsData = rawData;
+            if (owner !== "all") {
+                filteredAccountsData = rawData.filter(row => row.owner === owner);
             }
+            
+            const accounts = [...new Set(filteredAccountsData.map(d => d.account_name).filter(a => a))].sort();
+            accounts.forEach(account => {
+                const option = document.createElement("option");
+                option.value = account;
+                option.textContent = account;
+                accountFilter.appendChild(option);
+            });
         }
-        return false; // Data point did not match any of the 26-25 month cycles
-    }
-  });
+        
+        function filterAndRenderData() {
+            const year = document.getElementById("yearFilter").value;
+            const month = document.getElementById("monthFilter").value;
+            const dateFrom = document.getElementById("dateFromFilter").value;
+            const dateTo = document.getElementById("dateToFilter").value;
+            const owner = document.getElementById("ownerFilter").value;
+            const account = document.getElementById("accountFilter").value;
 
-  renderSummary(filtered);
-  renderOwnerSummary(filtered);
-  // ส่ง 'filtered' data ไปยังฟังก์ชัน monthly และ daily ด้วย
-  renderMonthly(filtered);
-  renderDailySummary(filtered);
-}
+            let filteredData = rawData;
 
-function resetFilter() {
-  document.getElementById('startDate').value = '';
-  document.getElementById('endDate').value = '';
-  document.querySelectorAll('#monthCheckboxes input').forEach(c => c.checked = false);
-  document.getElementById('ownerSelect').value = ''; // Reset owner filter
-  document.getElementById('accountNameSelect').value = ''; // รีเซ็ตชื่อบัญชีด้วย
-  // Set current year as default
-  document.getElementById('yearSelect').value = new Date().getFullYear();
-  applyFilter();
-}
+            // Date filtering logic based on which filter is used
+            if (year !== "all") {
+                filteredData = filteredData.filter(row => {
+                    const rowDate = new Date(row.date);
+                    return !isNaN(rowDate) && rowDate.getFullYear().toString() === year;
+                });
+            } else if (month !== "all") {
+                filteredData = filteredData.filter(row => {
+                    const rowDate = new Date(row.date);
+                    return !isNaN(rowDate) && (rowDate.getMonth() + 1).toString().padStart(2, '0') === month;
+                });
+            } else if (dateFrom || dateTo) {
+                filteredData = filteredData.filter(row => {
+                    const rowDateStr = row.date.split('T')[0];
+                    const fromValid = !dateFrom || rowDateStr >= dateFrom;
+                    const toValid = !dateTo || rowDateStr <= dateTo;
+                    return fromValid && toValid;
+                });
+            }
 
-function renderSummary(data) {
-  let totalSpend = 0;
-  let totalPurchases = 0;
-  let totalRevenue = 0;
+            // Other filters
+            if (owner !== "all") {
+                filteredData = filteredData.filter(row => row.owner === owner);
+            }
+            if (account !== "all") {
+                filteredData = filteredData.filter(row => row.account_name === account);
+            }
 
-  data.forEach(e => {
-    totalSpend += +e.spend_total;
-    totalPurchases += +e.purchases;
-    totalRevenue += +e.revenue;
-  });
-
-  const avgCostPerPurchase = totalPurchases > 0 ? totalSpend / totalPurchases : 0;
-  const totalRoas = totalSpend > 0 ? (totalRevenue / totalSpend) : 0;
-
-  document.getElementById('totalSpend').textContent = "฿" + totalSpend.toLocaleString(undefined, {minimumFractionDigits: 2});
-  document.getElementById('totalPurchasesSummary').textContent = totalPurchases.toLocaleString();
-  document.getElementById('avgCostPerPurchaseSummary').textContent = "฿" + avgCostPerPurchase.toFixed(2);
-  document.getElementById('totalRevenueSummary').textContent = "฿" + totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2});
-  document.getElementById('totalRoas').textContent = totalRoas.toFixed(2);
-}
-
-function renderOwnerSummary(data) {
-  const ownerContainer = document.getElementById("ownerSummaryContainer");
-  ownerContainer.innerHTML = ""; // Clear existing data
-
-  const groupedByOwner = {};
-  data.forEach(item => {
-    const owner = item.owner;
-    if (!groupedByOwner[owner]) {
-      groupedByOwner[owner] = {
-        totalSpend: 0,
-        totalPurchases: 0,
-        totalRevenue: 0,
-        accounts: {} // To store aggregated data for each account_name/account_id
-      };
-    }
-
-    groupedByOwner[owner].totalSpend += +item.spend_total;
-    groupedByOwner[owner].totalPurchases += +item.purchases;
-    groupedByOwner[owner].totalRevenue += +item.revenue;
-
-    // Use a unique key for each account based on name and ID
-    const accountName = item.account_name || 'ไม่ระบุชื่อบัญชี';
-    const accountId = item.account_id || 'ไม่ระบุ ID บัญชี';
-    const accountKey = `${accountName}||${accountId}`;
-
-    if (!groupedByOwner[owner].accounts[accountKey]) {
-      groupedByOwner[owner].accounts[accountKey] = {
-        account_name: accountName,
-        account_id: accountId,
-        spend: 0,
-        purchases: 0,
-        revenue: 0
-      };
-    }
-    groupedByOwner[owner].accounts[accountKey].spend += +item.spend_total;
-    groupedByOwner[owner].accounts[accountKey].purchases += +item.purchases;
-    groupedByOwner[owner].accounts[accountKey].revenue += +item.revenue;
-  });
-
-  // Sort owners by name for consistent display
-  const sortedOwners = Object.keys(groupedByOwner).sort();
-
-  // Generate a table for each owner
-  sortedOwners.forEach(ownerName => {
-    const ownerData = groupedByOwner[ownerName];
-
-    // Calculate totals for the current owner
-    const ownerTotalSpend = ownerData.totalSpend;
-    const ownerTotalPurchases = ownerData.totalPurchases;
-    const ownerTotalRevenue = ownerData.totalRevenue;
-    const ownerAvgCostPerPurchase = ownerTotalPurchases > 0 ? ownerTotalSpend / ownerTotalPurchases : 0;
-    const ownerRoas = ownerTotalSpend > 0 ? (ownerTotalRevenue / ownerTotalSpend) : 0;
-
-    // --- Create main card div ---
-    const ownerCardDiv = document.createElement('div');
-    ownerCardDiv.className = 'card p-3 mb-4';
-
-    // --- Create header for the owner ---
-    const ownerHeader = document.createElement('h5');
-    ownerHeader.className = 'text-secondary mb-3 owner-summary-header';
-    ownerHeader.innerHTML = `
-        <i class="bi bi-person-fill me-2"></i> เจ้าของบัญชี: ${ownerName}
-        <span class="ms-3">| ค่าแอดรวม: <span class="text-money">฿${ownerTotalSpend.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></span>
-        <span class="ms-3">| จำนวนซื้อรวม: ${ownerTotalPurchases.toLocaleString()}</span>
-        <span class="ms-3">| รายได้รวม: <span class="text-money">฿${ownerTotalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></span>
-        <span class="ms-3">| ROAS รวม: <span class="text-roas">${ownerRoas.toFixed(2)}</span></span>
-    `;
-    ownerCardDiv.appendChild(ownerHeader);
-
-    // --- Create table responsive div ---
-    const tableResponsiveDiv = document.createElement('div');
-    tableResponsiveDiv.className = 'table-responsive';
-    ownerCardDiv.appendChild(tableResponsiveDiv);
-
-    // --- Create the table ---
-    const table = document.createElement('table');
-    table.className = 'table table-bordered text-center align-middle';
-    tableResponsiveDiv.appendChild(table);
-
-    // --- Create table header (thead) ---
-    const thead = document.createElement('thead');
-    thead.className = 'table-light';
-    thead.innerHTML = `
-        <tr>
-            <th>ชื่อบัญชี</th>
-            <th>ID บัญชี</th>
-            <th>ค่าแอด</th>
-            <th>ต้นทุน/ซื้อ</th>
-            <th>จำนวนซื้อ</th>
-            <th>รายได้</th>
-            <th>ROAS</th>
-        </tr>
-    `;
-    table.appendChild(thead);
-
-    // --- Create table body (tbody) for accounts ---
-    const tbody = document.createElement('tbody');
-    // Ensure the ID is valid by removing non-alphanumeric characters
-    tbody.id = `ownerAccountsTableBody-${ownerName.replace(/[^a-zA-Z0-9]/g, '')}`;
-    table.appendChild(tbody); // Append tbody to table *before* adding rows to it
-
-    // --- Append the entire card to the main container ---
-    ownerContainer.appendChild(ownerCardDiv);
-
-    // --- Add account details to the table for this owner ---
-    // Sort accounts by account_name for consistent display within each owner
-    const sortedAccounts = Object.values(ownerData.accounts).sort((a, b) => a.account_name.localeCompare(b.account_name));
-
-    sortedAccounts.forEach(account => {
-      const accountAvgCostPerPurchase = account.purchases > 0 ? account.spend / account.purchases : 0;
-      const accountRoas = account.spend > 0 ? (account.revenue / account.spend) : 0;
-
-      const row = document.createElement('tr'); // Create a new row element
-      row.innerHTML = `
-        <td>${account.account_name}</td>
-        <td>${account.account_id}</td>
-        <td class="text-money">฿${account.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-        <td>฿${accountAvgCostPerPurchase.toFixed(2)}</td> <td>${account.purchases.toLocaleString()}</td>
-        <td class="text-money">฿${account.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-        <td class="text-roas">${accountRoas.toFixed(2)}</td>
-      `;
-      tbody.appendChild(row); // Append the row to the tbody directly
-    });
-  });
-}
-
-function renderMonthly(data) { // รับ 'data' ที่ถูกกรองแล้ว
-  const monthly = {};
-  const selectedYear = parseInt(document.getElementById('yearSelect').value);
-  const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-
-  // Initialize monthly object for all 12 "reporting months" based on 26-25 cycle
-  for (let i = 1; i <= 12; i++) {
-    monthly[i] = { spend: 0, purchases: 0, revenue: 0 };
-  }
-
-  // Group data by the 26-25 reporting month
-  data.forEach(e => { // ใช้ 'data' ที่ถูกกรองแล้ว
-    const dataDate = new Date(e.date);
-
-    let reportingMonthCalendarIndex = dataDate.getMonth();
-    let reportingYear = dataDate.getFullYear();
-
-    if (dataDate.getDate() > 25) {
-        reportingMonthCalendarIndex = (reportingMonthCalendarIndex + 1) % 12;
-        if (reportingMonthCalendarIndex === 0) {
-            reportingYear += 1;
+            renderDashboard(filteredData);
         }
-    }
+        
+        function handleDateFilterChange() {
+            const yearFilter = document.getElementById("yearFilter");
+            const monthFilter = document.getElementById("monthFilter");
+            const dateFromFilter = document.getElementById("dateFromFilter");
+            const dateToFilter = document.getElementById("dateToFilter");
 
-    if (reportingYear === selectedYear) {
-        const reportingMonthNumber = reportingMonthCalendarIndex + 1;
-        if (monthly[reportingMonthNumber]) {
-            monthly[reportingMonthNumber].spend += +e.spend_total;
-            monthly[reportingMonthNumber].purchases += +e.purchases;
-            monthly[reportingMonthNumber].revenue += +e.revenue;
+            const isYearSelected = yearFilter.value !== "all";
+            const isMonthSelected = monthFilter.value !== "all";
+            const isDateRangeSelected = dateFromFilter.value || dateToFilter.value;
+            
+            // Clear other date filters based on which one was just changed
+            if (isYearSelected) {
+                monthFilter.value = "all";
+                dateFromFilter.value = "";
+                dateToFilter.value = "";
+            } else if (isMonthSelected) {
+                yearFilter.value = "all";
+                dateFromFilter.value = "";
+                dateToFilter.value = "";
+            } else if (isDateRangeSelected) {
+                yearFilter.value = "all";
+                monthFilter.value = "all";
+            }
+
+            filterAndRenderData();
         }
-    }
-  });
 
-  const tbody = document.getElementById("monthlyTableBody");
-  tbody.innerHTML = ""; // Clear existing data
+        function renderDashboard(data) {
+            renderOverallSummary(data);
 
-  for (let i = 1; i <= 12; i++) {
-    const netRevenue = monthly[i].revenue - monthly[i].spend;
-    const netRevenueClass = netRevenue < 0 ? 'text-refund' : 'text-money';
+            const groupedData = data.reduce((acc, row) => {
+                if (!row.owner || row.owner.trim() === '') return acc; 
+                if (!acc[row.owner]) {
+                    acc[row.owner] = [];
+                }
+                acc[row.owner].push(row);
+                return acc;
+            }, {});
 
-    tbody.innerHTML += `<tr>
-      <td>${monthNames[i - 1]}</td>
-      <td>฿${monthly[i].spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-      <td>${monthly[i].purchases.toLocaleString()}</td>
-      <td class="text-money">฿${monthly[i].revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-      <td class="${netRevenueClass}">฿${netRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-    </tr>`;
-  }
-}
+            renderGroupedTables(groupedData);
+        }
 
-function renderDailySummary(data) { // รับ 'data' ที่ถูกกรองแล้ว
-  const daily = {};
-  const dailyTableBody = document.getElementById("dailyTableBody");
-  dailyTableBody.innerHTML = ""; // Clear existing data
+        function renderOverallSummary(data) {
+            const totals = data.reduce((acc, row) => {
+                acc.spend += row.spend_total || 0;
+                acc.orders += row.purchases || 0;
+                acc.revenue += row.revenue || 0;
+                return acc;
+            }, { spend: 0, orders: 0, revenue: 0 });
 
-  // Group data by exact date
-  data.forEach(item => { // ใช้ 'data' ที่ถูกกรองแล้ว
-    const date = new Date(item.date).toISOString().split('T')[0]; // Get date in YYYY-MM-DD format
-    if (!daily[date]) {
-      daily[date] = {
-        spend: 0,
-        purchases: 0,
-        revenue: 0
-      };
-    }
-    daily[date].spend += +item.spend_total;
-    daily[date].purchases += +item.purchases;
-    daily[date].revenue += +item.revenue;
-  });
+            const overallRoas = totals.spend ? (totals.revenue / totals.spend).toFixed(2) : '0.00';
+            const overallCostPerOrder = totals.orders ? (totals.spend / totals.orders).toFixed(2) : '0.00';
+            
+            const summaryContainer = document.getElementById("overallSummary");
+            summaryContainer.innerHTML = `
+                <div class="col-md-6 col-lg-3">
+                    <div class="card summary-card text-primary">
+                        <div class="card-body">
+                            <i class="bi bi-cash-stack"></i>
+                            <p class="total-label mb-1">ยอดรวมค่าโฆษณา</p>
+                            <p class="total-value">฿${totals.spend.toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card summary-card text-info">
+                        <div class="card-body">
+                            <i class="bi bi-cart-fill"></i>
+                            <p class="total-label mb-1">ยอดรวมจำนวนออเดอร์</p>
+                            <p class="total-value">${totals.orders.toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card summary-card text-success">
+                        <div class="card-body">
+                            <i class="bi bi-coin"></i>
+                            <p class="total-label mb-1">ต้นทุน/ออเดอร์</p>
+                            <p class="total-value">฿${overallCostPerOrder}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card summary-card">
+                        <div class="card-body">
+                            <i class="bi bi-graph-up"></i>
+                            <p class="total-label mb-1">ยอดรวม ROAS</p>
+                            <p class="total-value roas-value ${overallRoas >= 3 ? 'is-good' : ''}">${overallRoas}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
-  // Sort dates
-  const sortedDates = Object.keys(daily).sort();
+        function renderGroupedTables(groupedData) {
+            const container = document.getElementById("groupedTablesContainer");
+            container.innerHTML = "";
 
-  sortedDates.forEach(date => {
-    const dailyData = daily[date];
-    const avgCostPerPurchase = dailyData.purchases > 0 ? dailyData.spend / dailyData.purchases : 0;
-    const roas = dailyData.spend > 0 ? (dailyData.revenue / dailyData.spend) : 0;
+            if (Object.keys(groupedData).length === 0) {
+                 container.innerHTML = `<div class="alert alert-info text-center" role="alert">
+                                            ไม่พบข้อมูลผู้ดูแลในตัวกรองที่เลือก.
+                                        </div>`;
+                 return;
+            }
 
-    const row = dailyTableBody.insertRow();
-    row.innerHTML = `
-      <td>${date}</td>
-      <td class="text-money">฿${dailyData.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-      <td>${dailyData.purchases.toLocaleString()}</td>
-      <td>฿${avgCostPerPurchase.toFixed(2)}</td> <td class="text-money">฿${dailyData.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-      <td class="text-roas">${roas.toFixed(2)}</td>
-    `;
-  });
-}
+            Object.keys(groupedData).sort().forEach(owner => {
+                const ownerData = groupedData[owner];
+                const ownerTotals = ownerData.reduce((acc, row) => {
+                    acc.spend += row.spend_total || 0;
+                    acc.orders += row.purchases || 0;
+                    acc.revenue += row.revenue || 0;
+                    return acc;
+                }, { spend: 0, orders: 0, revenue: 0 });
 
-</script>
+                const ownerRoas = ownerTotals.spend ? (ownerTotals.revenue / ownerTotals.spend).toFixed(2) : '0.00';
+                
+                const accountsSummary = ownerData.reduce((acc, row) => {
+                    if (!acc[row.account_name]) {
+                        acc[row.account_name] = { 
+                            spend: 0, 
+                            orders: 0, 
+                            revenue: 0,
+                        };
+                    }
+                    acc[row.account_name].spend += row.spend_total || 0;
+                    acc[row.account_name].orders += row.purchases || 0;
+                    acc[row.account_name].revenue += row.revenue || 0;
+                    return acc;
+                }, {});
+
+                const cardHtml = `
+                    <div class="card grouped-card mb-4">
+                        <div class="card-header card-header-grouped">
+                            <span><i class="bi bi-person-fill me-2"></i> เจ้าของบัญชี: <span class="text-primary">${owner || '-'}</span></span>
+                            <span class="float-end">
+                                ค่าแอดรวม: <span class="fw-bold text-primary">฿${ownerTotals.spend.toLocaleString()}</span> |
+                                จำนวนซื้อรวม: <span class="fw-bold text-info">${ownerTotals.orders.toLocaleString()}</span> |
+                                รายได้รวม: <span class="fw-bold text-success">฿${ownerTotals.revenue.toLocaleString()}</span> |
+                                ROAS รวม: <span class="roas-value ${ownerRoas >= 3 ? 'is-good' : ''}">${ownerRoas}</span>
+                            </span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="text-center">
+                                        <tr>
+                                            <th>ชื่อบัญชี</th>
+                                            <th>ค่าแอด</th>
+                                            <th>ต้นทุน/ซื้อ</th>
+                                            <th>จำนวนซื้อ</th>
+                                            <th>รายได้</th>
+                                            <th>ROAS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-center">
+                                        ${Object.keys(accountsSummary).map(accountName => {
+                                            const { spend, orders, revenue } = accountsSummary[accountName];
+                                            const costPerOrder = orders ? (spend / orders).toFixed(2) : '0.00';
+                                            const roas = spend ? (revenue / spend).toFixed(2) : '-';
+                                            return `
+                                                <tr>
+                                                    <td><i class="bi bi-bookmark-fill me-2"></i> ${accountName}</td>
+                                                    <td>฿${spend.toLocaleString()}</td>
+                                                    <td>฿${costPerOrder}</td>
+                                                    <td>${orders}</td>
+                                                    <td>฿${revenue.toLocaleString()}</td>
+                                                    <td class="roas-value ${roas >= 3 ? 'is-good' : ''}">${roas}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            });
+        }
+        
+        function resetFilters() {
+            document.getElementById("yearFilter").value = "all";
+            document.getElementById("monthFilter").value = "all";
+            document.getElementById("dateFromFilter").value = "";
+            document.getElementById("dateToFilter").value = "";
+            document.getElementById("ownerFilter").value = "all";
+            updateAccountFilter();
+            filterAndRenderData();
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadDataAndRender();
+            
+            // Attach event listeners for all date filters
+            document.getElementById("yearFilter").addEventListener("change", handleDateFilterChange);
+            document.getElementById("monthFilter").addEventListener("change", handleDateFilterChange);
+            document.getElementById("dateFromFilter").addEventListener("change", handleDateFilterChange);
+            document.getElementById("dateToFilter").addEventListener("change", handleDateFilterChange);
+            
+            document.getElementById("ownerFilter").addEventListener("change", () => {
+                updateAccountFilter();
+                filterAndRenderData();
+            });
+            document.getElementById("accountFilter").addEventListener("change", filterAndRenderData);
+            document.getElementById("clearFiltersBtn").addEventListener("click", resetFilters);
+            document.getElementById("homeBtn").addEventListener("click", () => {
+                window.location.href = HOME_URL;
+            });
+        });
+    </script>
 </body>
 </html>
